@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build"
+  command = "npx convex deploy --cmd 'npx vite build' --cmd-url-env-var-name VITE_CONVEX_URL"
   publish = "dist"
 
 # Vite hashed assets — immutable, cache forever
@@ -32,7 +32,12 @@
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=(self)"
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=(self)"
+
+# Edge function for dynamic OG meta tags
+[[edge_functions]]
+  function = "og-meta"
+  path = "/offer/*"
 
 # SPA fallback — all routes serve index.html (static assets served first automatically)
 [[redirects]]

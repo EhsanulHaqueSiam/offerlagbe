@@ -2,13 +2,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { Marker } from "react-map-gl/maplibre";
-import { CommentSection, CommentSectionSkeleton } from "@/components/offers/CommentSection";
+import { CommentSection } from "@/components/offers/CommentSection";
 import { CountdownTimer } from "@/components/offers/CountdownTimer";
 import { CouponBadge } from "@/components/offers/CouponBadge";
 import { ImageCarousel } from "@/components/offers/ImageCarousel";
 import { NearbyOffersSection } from "@/components/offers/NearbyOffersSection";
+import { PhotoVerification } from "@/components/offers/PhotoVerification";
 import { ReportModal } from "@/components/offers/ReportModal";
 import { RichText } from "@/components/offers/RichText";
+import { VerificationBadge } from "@/components/offers/VerificationBadge";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { TrustBadge } from "@/components/voting/TrustBadge";
 import { VoteButtons } from "@/components/voting/VoteButtons";
@@ -41,8 +43,7 @@ function OfferDetailPage() {
   const [bookmarkVersion, setBookmarkVersion] = useState(0);
   const [showReport, setShowReport] = useState(false);
 
-  // Lazy load comments via IntersectionObserver
-  const [commentsVisible, setCommentsVisible] = useState(false);
+  // Comments always load eagerly (important for engagement)
   const commentsRef = useRef<HTMLDivElement>(null);
 
   // Lazy load nearby offers
@@ -50,26 +51,16 @@ function OfferDetailPage() {
   const nearbyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const refs = [
-      { ref: commentsRef, setter: setCommentsVisible, visible: commentsVisible },
-      { ref: nearbyRef, setter: setNearbyVisible, visible: nearbyVisible },
-    ];
-    const observers: IntersectionObserver[] = [];
-    for (const { ref, setter, visible } of refs) {
-      if (!ref.current || visible) continue;
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) setter(true);
-        },
-        { rootMargin: "200px" },
-      );
-      observer.observe(ref.current);
-      observers.push(observer);
-    }
-    return () => {
-      for (const o of observers) o.disconnect();
-    };
-  }, [commentsVisible, nearbyVisible]);
+    if (nearbyVisible || !nearbyRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setNearbyVisible(true);
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(nearbyRef.current);
+    return () => observer.disconnect();
+  }, [nearbyVisible]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: bookmarkVersion triggers recomputation
   const bookmarked = useMemo(() => {
@@ -231,6 +222,7 @@ function OfferDetailPage() {
               <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: category?.color }} />
               <span className="text-xs text-slate-400 font-medium">{category?.label ?? offer.category}</span>
               {offer.endDate && <CountdownTimer endDate={offer.endDate} />}
+              <VerificationBadge upvotes={offer.upvotes} commentCount={offer.commentCount} />
             </div>
             <h2 className="text-xl font-bold text-white leading-snug">{offer.title}</h2>
             <Link
@@ -303,7 +295,7 @@ function OfferDetailPage() {
               />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <span>{offer.address}</span>
+            <span>{offer.address || t("offer.locationOnMap")}</span>
           </div>
 
           {/* Mini map */}
@@ -329,7 +321,7 @@ function OfferDetailPage() {
 
           {/* Get Directions */}
           <a
-            href={getDirectionsUrl(offer.latitude, offer.longitude, offer.storeName)}
+            href={getDirectionsUrl(offer.latitude, offer.longitude, offer.storeName, offer.googleMapsUrl)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/15 transition-all active:scale-[0.98] text-sm font-medium"
@@ -425,19 +417,25 @@ function OfferDetailPage() {
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all active:scale-95"
             >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2zm5.82 13.97c-.25.71-1.47 1.32-2.01 1.41-.51.08-1.16.12-1.87-.12-.43-.15-.99-.35-1.7-.68-2.98-1.29-4.93-4.29-5.08-4.49-.15-.21-1.21-1.62-1.21-3.08 0-1.47.77-2.19 1.04-2.49.27-.3.6-.37.8-.37.2 0 .4 0 .57.01.18.01.43-.07.67.51.25.59.84 2.06.91 2.21.08.15.13.32.03.52-.11.19-.16.31-.31.48-.15.17-.32.37-.46.5-.15.14-.31.29-.13.57.17.28.77 1.27 1.65 2.06 1.14.99 2.09 1.3 2.39 1.44.29.15.46.13.64-.08.17-.2.74-.86.94-1.16.2-.3.4-.25.67-.15.27.1 1.72.81 2.01.96.3.15.5.22.57.34.08.12.08.68-.17 1.39z" />
+              </svg>
               WhatsApp
             </a>
           </div>
         </div>
+
+        {/* Photo Verification */}
+        <PhotoVerification offerId={offer._id} />
 
         {/* Nearby offers (lazy loaded) */}
         <div ref={nearbyRef}>
           {nearbyVisible ? <NearbyOffersSection offerId={offer._id} /> : <div className="h-20" />}
         </div>
 
-        {/* Comments (lazy loaded) */}
+        {/* Comments */}
         <div ref={commentsRef}>
-          {commentsVisible ? <CommentSection offerId={offer._id} /> : <CommentSectionSkeleton />}
+          <CommentSection offerId={offer._id} />
         </div>
       </div>
 

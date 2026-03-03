@@ -2,47 +2,88 @@
 
 **Discover and share the best deals, discounts, and offers near you in Bangladesh.**
 
+> **Live:** [offerlagbe.netlify.app](https://offerlagbe.netlify.app/)
+
 OfferLagbe is a real-time, map-based offer discovery platform built for Bangladesh. Users can anonymously post offers they find, vote on their authenticity, and discover deals happening nearby — all without creating an account.
 
 ## Features
 
+### Core
 - **Interactive Map** — Browse offers on a MapLibre-powered map with clustering and popups
+- **Heatmap Mode** — Toggle between bubble markers and heat density visualization
 - **Anonymous Identity** — No sign-up required. A unique visitor ID is generated locally
 - **Real-time Updates** — All data syncs instantly via Convex subscriptions
 - **Offer Voting** — Community-driven trust system with upvotes/downvotes and auto-moderation
-- **Comments & Replies** — Threaded comments with upvoting on each offer
-- **Report Abuse** — Flag spam, fake, expired, or inappropriate offers
-- **Image Upload** — Attach up to 5 photos per offer with automatic compression
+- **Community Verification Badge** — Offers with 5+ upvotes and 3+ comments earn a "Verified" badge
+- **Photo Verification** — Users can upload proof photos to verify deals are real
+
+### Discovery
+- **Deal of the Day** — Gold-highlighted top-scoring recent offer
+- **Trending Offers** — Hot deals from the last 48 hours
+- **Best This Week** — Top-rated offers from the past 7 days
+- **Top Stores Leaderboard** — Stores ranked by community upvotes and offer count
 - **Nearby Offers** — See other deals within 500m of any offer
 - **Store Pages** — View all offers from a specific store
-- **Countdown Timers** — Live countdown for expiring offers
-- **Tag System** — Tags like "Verified", "Limited Stock", "Online Only", etc.
-- **Price & Date Filters** — Filter by price range, date posted, category
-- **Leaderboard** — Top contributors ranked by community upvotes
-- **Offline Mode** — Cached offers available when offline via IndexedDB
-- **PWA** — Installable as a Progressive Web App with service worker caching
-- **Bilingual** — Full English and Bengali (bn) translations
-- **Dark Theme** — Glass morphism dark UI with smooth animations
-- **Directions** — One-tap directions to any offer via Google/OSM Maps
-- **Coupon Codes** — Copy-to-clipboard coupon code badges
-- **Duplicate Detection** — Warns before posting duplicate offers nearby
+
+### Submission
+- **Google Maps Integration** — Paste a Google Maps link (including share links) to auto-detect location
+- **Duplicate Detection** — Warns before posting duplicate offers nearby, while allowing same brand at different locations
+- **Scam/Fake Store Detection** — Auto-flags offers from stores with >50% flagged history
+- **Image Upload** — Up to 5 photos per offer, auto-compressed to WebP format
 - **Rich Text Descriptions** — Markdown subset support (bold, links, bullet lists)
+- **Tag System** — Tags like "Verified", "Limited Stock", "Online Only", etc.
+
+### Search & Filters
+- **Sort** — By newest, nearest, best discount, or most trusted
+- **Category Filter** — 12 categories (Food, Electronics, Fashion, etc.)
+- **Price Range Filter** — Filter by price brackets
+- **Date Filter** — Today, this week, this month
+- **Near Me** — Filter offers within 5km radius
+- **Saved Offers** — Bookmark and filter by saved offers
+
+### Social
+- **Comments & Replies** — Threaded comments with upvoting
+- **Share** — Share via Web Share API or clipboard
+- **WhatsApp Share** — Direct WhatsApp sharing button
+- **Push Notifications** — Browser push notifications for new offers matching your preferences
+- **New Offer Alerts** — Real-time toast notifications for nearby new submissions
+
+### Mobile Experience
+- **Responsive Bottom Sheet** — Full sidebar on desktop, swipeable bottom sheet on mobile
+- **Pull-to-Refresh** — Pull down gesture to refresh offer list
+- **Swipe Actions** — Swipe right to save, left to dismiss offers
+- **Back to Map FAB** — Floating button to close sidebar and return to map
+- **Onboarding Tour** — 3-step tooltip walkthrough for first-time visitors
+- **Sidebar-to-Map Navigation** — Clicking an offer in sidebar pans and zooms the map to its location
+
+### Infrastructure
+- **Skeleton Loading** — Shimmer placeholders while content loads
+- **Offline Mode** — Cached offers available when offline via IndexedDB + Service Worker
+- **PWA** — Installable as a Progressive Web App
+- **OG Meta Tags** — Dynamic rich previews when sharing on WhatsApp/Facebook via Netlify Edge Functions
+- **Bilingual** — Full English and Bengali translations
+- **Dark Theme** — Glass morphism dark UI with smooth animations
+- **Countdown Timers** — Live countdown for expiring offers
+- **Coupon Codes** — Copy-to-clipboard coupon code badges
+- **Directions** — One-tap directions via Google Maps (uses original Google Maps link when available)
 - **Image Carousel** — Swipeable image gallery with lightbox
-- **Responsive** — Works on desktop and mobile with bottom sheet on small screens
 
 ## Tech Stack
 
 - **Frontend**: React 19, TanStack Router, Tailwind CSS v4
 - **Backend**: Convex (real-time database + serverless functions)
 - **Maps**: MapLibre GL JS + OpenFreeMap tiles (free, no API key)
-- **Language**: TypeScript
-- **Build**: Vite
+- **Language**: TypeScript (strict mode)
+- **Build**: Vite 7 (Rolldown bundler)
+- **Package Manager**: Bun
+- **Linting**: Biome
+- **Deployment**: Netlify + Convex Cloud
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+
+- [Bun](https://bun.sh) (recommended) or Node.js 18+
 - A [Convex](https://convex.dev) account (free tier)
 
 ### Setup
@@ -53,16 +94,13 @@ git clone https://github.com/EhsanulHaqueSiam/offerlagbe.git
 cd offerlagbe
 
 # Install dependencies
-npm install
+bun install
 
 # Set up Convex
-npx convex dev
-
-# Copy environment template and fill in your Convex URL
-cp .env.example .env.local
+bunx convex dev
 
 # Start the dev server
-npm run dev
+bun run dev
 ```
 
 ### Seed Demo Data
@@ -72,14 +110,26 @@ After setting up Convex, you can seed demo offers via the Convex dashboard by ru
 ## Project Structure
 
 ```
-convex/           # Backend: Convex schema, queries, and mutations
+convex/           # Backend: Convex schema, queries, mutations, actions
+  offers.ts       # Offer CRUD, duplicate check, scam detection
+  votes.ts        # Voting logic with trust system
+  comments.ts     # Threaded comments with vote tracking
+  notifications.ts # Push notification subscriptions
+  verificationPhotos.ts # Photo verification system
+  leaderboard.ts  # Top stores ranking
 src/
-  components/     # React components (map, offers, UI, voting)
-  hooks/          # Custom React hooks
-  lib/            # Utilities (i18n, location, markdown, bookmarks, etc.)
+  components/     # React components
+    map/          # OfferMap, OfferBubbles (heatmap + clusters), OfferPopup
+    offers/       # OfferCard, SubmitOfferForm, CommentSection, PhotoVerification
+    notifications/ # Push notification settings
+    voting/       # VoteButtons, TrustBadge
+    ui/           # Header, Sidebar, Skeleton loaders, SwipeableCard, etc.
+  hooks/          # Custom React hooks (offline, notifications)
+  lib/            # Utilities (i18n, location, Google Maps parser, bookmarks, etc.)
   routes/         # TanStack Router file-based routes
   types/          # TypeScript type definitions
-public/           # Static assets, SW, manifest
+public/           # Static assets, Service Worker, manifest
+netlify/          # Netlify Edge Functions (OG meta tags)
 ```
 
 ## Security
@@ -90,7 +140,9 @@ public/           # Static assets, SW, manifest
 - Content Security Policy headers
 - Visitor IDs truncated in API responses to prevent impersonation
 - SVG uploads blocked (XSS vector)
+- Image compression to WebP before upload (max 300KB)
 - Seed mutation is internal-only (not callable from client)
+- Convex deployment URL in HTML is safe — it's a public API endpoint with server-side auth
 
 ## Contributors
 

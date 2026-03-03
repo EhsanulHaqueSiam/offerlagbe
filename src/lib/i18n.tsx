@@ -35,6 +35,7 @@ const en = {
   "offer.saved": "Offer saved!",
   "offer.bookmarkRemoved": "Bookmark removed",
   "offer.flaggedWarning": "This offer has been flagged by the community as potentially inaccurate.",
+  "offer.locationOnMap": "See location on map",
 
   // Detail page
   "detail.backToOffers": "Back to offers",
@@ -72,7 +73,12 @@ const en = {
   "submit.titlePlaceholder": "e.g., 50% off on all burgers",
   "submit.customPercent": "Or type custom %",
   "submit.descriptionPlaceholder": "What's the offer about?",
-  "submit.addressPlaceholder": "Address — e.g., Gulshan 2, Dhaka",
+  "submit.addressPlaceholder": "Address — e.g., Gulshan 2, Dhaka (optional)",
+  "submit.addressHint": "Optional — add full address or landmarks for easier finding",
+  "submit.googleMapsUrl": "Google Maps Link",
+  "submit.googleMapsPlaceholder": "Paste Google Maps link here",
+  "submit.googleMapsDetected": "Location detected from Google Maps link",
+  "submit.googleMapsInvalid": "Could not extract location from this link",
 
   // Submit form errors
   "error.storeRequired": "Store name is required",
@@ -162,12 +168,11 @@ const en = {
   "comments.sortByNew": "New",
 
   // Leaderboard
-  "leaderboard.title": "Leaderboard",
-  "leaderboard.rank": "Rank",
-  "leaderboard.contributor": "Contributor",
-  "leaderboard.totalUpvotes": "Total Upvotes",
-  "leaderboard.offerCount": "{n} offers posted",
-  "leaderboard.empty": "No contributors yet",
+  "leaderboard.title": "Top Stores",
+  "leaderboard.offerCount": "{n} offers",
+  "leaderboard.bestDiscount": "up to {n}% OFF",
+  "leaderboard.active": "active",
+  "leaderboard.empty": "No stores yet",
 
   // Filters
   "filter.price": "Price",
@@ -222,6 +227,52 @@ const en = {
   "offline.banner": "You're offline — showing cached offers",
   "offline.stale": "Data may be outdated",
 
+  // Onboarding Tour
+  "tour.step1": "Set your location to find offers nearby",
+  "tour.step2": "Browse, search, and filter offers here",
+  "tour.step3": "Vote on offers to help the community",
+  "tour.skip": "Skip",
+  "tour.next": "Next",
+  "tour.done": "Got it!",
+
+  // Verification Badge
+  "badge.communityVerified": "Community Verified",
+  "badge.verified": "Verified",
+
+  // Deal of the Day
+  "sidebar.dealOfDay": "Deal of the Day",
+
+  // Photo Verification
+  "verify.title": "Verification Photos",
+  "verify.verifiedBy": "Verified by {n} people",
+  "verify.beFirst": "Be the first to verify this deal!",
+  "verify.button": "Verify this deal",
+  "verify.submitted": "Verification photo submitted!",
+  "verify.uploading": "Uploading...",
+
+  // Heatmap
+  "map.bubbles": "Bubbles",
+  "map.heatmap": "Heatmap",
+
+  // Push Notifications
+  "notify.title": "Notification Preferences",
+  "notify.enable": "Enable Notifications",
+  "notify.disable": "Disable Notifications",
+  "notify.update": "Update Preferences",
+  "notify.categories": "Categories",
+  "notify.radius": "Radius",
+  "notify.unsupported": "Push notifications are not supported in this browser",
+
+  // Swipe Actions
+  "swipe.save": "Save",
+  "swipe.dismiss": "Dismiss",
+
+  // Scam Detection
+  "toast.storeReputation": "This store has been flagged due to reputation issues",
+
+  // Back to Map
+  "fab.backToMap": "Back to map",
+
   // Language
   "lang.switch": "বাংলা",
 } as const;
@@ -254,6 +305,7 @@ const bn: Record<keyof typeof en, string> = {
   "offer.saved": "অফার সেভ হয়েছে!",
   "offer.bookmarkRemoved": "বুকমার্ক মুছে ফেলা হয়েছে",
   "offer.flaggedWarning": "এই অফারটি সম্প্রদায় দ্বারা সন্দেহজনক হিসেবে চিহ্নিত হয়েছে।",
+  "offer.locationOnMap": "ম্যাপে লোকেশন দেখুন",
 
   "detail.backToOffers": "অফারে ফিরুন",
   "detail.offerNotFound": "অফার পাওয়া যায়নি",
@@ -288,7 +340,12 @@ const bn: Record<keyof typeof en, string> = {
   "submit.titlePlaceholder": "যেমন, সব বার্গারে ৫০% ছাড়",
   "submit.customPercent": "অথবা কাস্টম % লিখুন",
   "submit.descriptionPlaceholder": "অফার সম্পর্কে বিস্তারিত",
-  "submit.addressPlaceholder": "ঠিকানা — যেমন, গুলশান ২, ঢাকা",
+  "submit.addressPlaceholder": "ঠিকানা — যেমন, গুলশান ২, ঢাকা (ঐচ্ছিক)",
+  "submit.addressHint": "ঐচ্ছিক — সহজে খুঁজে পেতে পুরো ঠিকানা বা ল্যান্ডমার্ক দিন",
+  "submit.googleMapsUrl": "গুগল ম্যাপস লিংক",
+  "submit.googleMapsPlaceholder": "গুগল ম্যাপস লিংক পেস্ট করুন",
+  "submit.googleMapsDetected": "গুগল ম্যাপস থেকে লোকেশন পাওয়া গেছে",
+  "submit.googleMapsInvalid": "এই লিংক থেকে লোকেশন পাওয়া যায়নি",
 
   "error.storeRequired": "দোকানের নাম দিন",
   "error.titleRequired": "শিরোনাম দিন",
@@ -370,12 +427,11 @@ const bn: Record<keyof typeof en, string> = {
   "comments.sortByNew": "নতুন",
 
   // Leaderboard
-  "leaderboard.title": "লিডারবোর্ড",
-  "leaderboard.rank": "র‍্যাংক",
-  "leaderboard.contributor": "অবদানকারী",
-  "leaderboard.totalUpvotes": "মোট আপভোট",
-  "leaderboard.offerCount": "{n}টি অফার পোস্ট করেছেন",
-  "leaderboard.empty": "এখনও কোনো অবদানকারী নেই",
+  "leaderboard.title": "সেরা দোকান",
+  "leaderboard.offerCount": "{n}টি অফার",
+  "leaderboard.bestDiscount": "{n}% পর্যন্ত ছাড়",
+  "leaderboard.active": "সক্রিয়",
+  "leaderboard.empty": "এখনও কোনো দোকান নেই",
 
   // Filters
   "filter.price": "দাম",
@@ -429,6 +485,44 @@ const bn: Record<keyof typeof en, string> = {
   // Offline
   "offline.banner": "আপনি অফলাইনে আছেন — ক্যাশ করা অফার দেখাচ্ছে",
   "offline.stale": "তথ্য পুরনো হতে পারে",
+
+  // Onboarding Tour
+  "tour.step1": "কাছের অফার খুঁজতে আপনার লোকেশন সেট করুন",
+  "tour.step2": "এখানে অফার ব্রাউজ, সার্চ এবং ফিল্টার করুন",
+  "tour.step3": "কমিউনিটিকে সাহায্য করতে অফারে ভোট দিন",
+  "tour.skip": "স্কিপ",
+  "tour.next": "পরবর্তী",
+  "tour.done": "বুঝেছি!",
+
+  "badge.communityVerified": "কমিউনিটি যাচাইকৃত",
+  "badge.verified": "যাচাইকৃত",
+
+  "sidebar.dealOfDay": "আজকের সেরা ডিল",
+
+  "verify.title": "যাচাই ফটো",
+  "verify.verifiedBy": "{n} জন যাচাই করেছে",
+  "verify.beFirst": "এই ডিলটি প্রথম যাচাই করুন!",
+  "verify.button": "এই ডিল যাচাই করুন",
+  "verify.submitted": "যাচাই ফটো জমা দেওয়া হয়েছে!",
+  "verify.uploading": "আপলোড হচ্ছে...",
+
+  "map.bubbles": "বাবল",
+  "map.heatmap": "হিটম্যাপ",
+
+  "notify.title": "নোটিফিকেশন পছন্দ",
+  "notify.enable": "নোটিফিকেশন চালু করুন",
+  "notify.disable": "নোটিফিকেশন বন্ধ করুন",
+  "notify.update": "পছন্দ আপডেট করুন",
+  "notify.categories": "ক্যাটেগরি",
+  "notify.radius": "ব্যাসার্ধ",
+  "notify.unsupported": "এই ব্রাউজারে পুশ নোটিফিকেশন সাপোর্ট করে না",
+
+  "swipe.save": "সেভ",
+  "swipe.dismiss": "বাতিল",
+
+  "toast.storeReputation": "এই দোকানটি খ্যাতির কারণে ফ্ল্যাগ করা হয়েছে",
+
+  "fab.backToMap": "ম্যাপে ফিরুন",
 
   "lang.switch": "English",
 };

@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useConvex, useMutation } from "convex/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CATEGORIES } from "@/lib/categories";
+import { looksLikeGoogleMapsUrl, parseGoogleMapsUrl } from "@/lib/googleMaps";
 import { useTranslation } from "@/lib/i18n";
 import { compressImage, validateImageFile } from "@/lib/image";
 import { getLocationWithFallback, requestGPSLocation } from "@/lib/location";
@@ -29,6 +30,7 @@ interface FormData {
   latitude: number | null;
   longitude: number | null;
   address: string;
+  googleMapsUrl: string;
   // Optional "more details"
   description: string;
   originalPrice: string;
@@ -44,7 +46,7 @@ interface FormErrors {
   discountPercent?: string;
   category?: string;
   location?: string;
-  address?: string;
+  googleMapsUrl?: string;
   dates?: string;
 }
 
@@ -61,6 +63,7 @@ const initialForm: FormData = {
   latitude: null,
   longitude: null,
   address: "",
+  googleMapsUrl: "",
   description: "",
   originalPrice: "",
   offerPrice: "",
@@ -149,6 +152,38 @@ export function SubmitOfferForm() {
     setErrors((prev) => ({ ...prev, location: undefined }));
   }, []);
 
+  const [parsingGoogleUrl, setParsingGoogleUrl] = useState(false);
+
+  const handleGoogleMapsUrl = useCallback(
+    async (url: string) => {
+      setForm((prev) => ({ ...prev, googleMapsUrl: url }));
+      setErrors((prev) => ({ ...prev, googleMapsUrl: undefined }));
+      if (!looksLikeGoogleMapsUrl(url)) return;
+
+      setParsingGoogleUrl(true);
+      try {
+        const coords = await parseGoogleMapsUrl(url);
+        if (coords) {
+          setForm((prev) => ({
+            ...prev,
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            googleMapsUrl: url,
+          }));
+          setErrors((prev) => ({ ...prev, location: undefined, googleMapsUrl: undefined }));
+          toast(t("submit.googleMapsDetected"), "success");
+        } else {
+          setErrors((prev) => ({ ...prev, googleMapsUrl: t("submit.googleMapsInvalid") }));
+        }
+      } catch {
+        // Silent fail — user can still set location manually
+      } finally {
+        setParsingGoogleUrl(false);
+      }
+    },
+    [t],
+  );
+
   const handleLogoSelect = async (files: FileList) => {
     const file = files[0];
     if (!file) return;
@@ -213,7 +248,6 @@ export function SubmitOfferForm() {
     if (!form.discountPercent || disc <= 0 || disc > 100) errs.discountPercent = t("error.discountRange");
     if (!form.category) errs.category = t("error.categoryRequired");
     if (form.latitude === null || form.longitude === null) errs.location = t("error.locationRequired");
-    if (!form.address.trim()) errs.address = t("error.addressRequired");
     if (form.startDate && form.endDate && form.endDate < form.startDate) errs.dates = t("error.dateOrder");
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -246,7 +280,8 @@ export function SubmitOfferForm() {
         offerPrice: form.offerPrice ? Number(form.offerPrice) : undefined,
         latitude: form.latitude!,
         longitude: form.longitude!,
-        address: form.address.trim(),
+        address: form.address.trim() || undefined,
+        googleMapsUrl: form.googleMapsUrl.trim() || undefined,
         storeName: form.storeName.trim(),
         logoStorageId,
         imageStorageIds,
@@ -275,6 +310,7 @@ export function SubmitOfferForm() {
       try {
         const matches = await convex.query(api.offers.checkDuplicate, {
           title: form.title.trim(),
+          storeName: form.storeName.trim(),
           latitude: form.latitude,
           longitude: form.longitude,
         });
@@ -531,14 +567,40 @@ export function SubmitOfferForm() {
           )}
           <ErrorMsg msg={errors.location} />
 
+          {/* Google Maps URL — optional */}
+          <div className="mt-2">
+            <label className="block text-xs font-medium text-slate-400 mb-1">
+              {t("submit.googleMapsUrl")} <span className="text-slate-500 font-normal">({t("submit.optional")})</span>
+            </label>
+            <div className="relative">
+              <input
+                type="url"
+                value={form.googleMapsUrl}
+                onChange={(e) => handleGoogleMapsUrl(e.target.value)}
+                placeholder={t("submit.googleMapsPlaceholder")}
+                className={`${inputClass(errors.googleMapsUrl)} pr-8`}
+              />
+              {parsingGoogleUrl && (
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                  <svg className="w-4 h-4 animate-spin text-slate-400" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                </div>
+              )}
+            </div>
+            <ErrorMsg msg={errors.googleMapsUrl} />
+          </div>
+
+          {/* Address — optional */}
           <input
             type="text"
             value={form.address}
             onChange={(e) => updateForm({ address: e.target.value })}
             placeholder={t("submit.addressPlaceholder")}
-            className={`${inputClass(errors.address)} mt-2`}
+            className={`${inputClass()} mt-2`}
           />
-          <ErrorMsg msg={errors.address} />
+          <p className="text-[10px] text-slate-500 mt-1">{t("submit.addressHint")}</p>
         </div>
 
         {/* More Details — collapsible */}

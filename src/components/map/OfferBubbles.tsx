@@ -3,11 +3,14 @@ import { Layer, type LayerProps, Source } from "react-map-gl/maplibre";
 import { getCategoryColor } from "@/lib/categories";
 import type { Offer } from "@/types/offer";
 
+export type MapMode = "bubbles" | "heatmap";
+
 interface OfferBubblesProps {
   offers: Offer[];
+  mode?: MapMode;
 }
 
-export function OfferBubbles({ offers }: OfferBubblesProps) {
+export function OfferBubbles({ offers, mode = "bubbles" }: OfferBubblesProps) {
   const geojson = useMemo(() => {
     return {
       type: "FeatureCollection" as const,
@@ -181,29 +184,93 @@ export function OfferBubbles({ offers }: OfferBubblesProps) {
     },
   };
 
+  // --- Heatmap layer ---
+  const heatmapLayer: LayerProps = {
+    id: "offer-heatmap",
+    type: "heatmap",
+    source: "offers-heatmap",
+    paint: {
+      "heatmap-weight": ["interpolate", ["linear"], ["get", "discountPercent"], 5, 0.3, 50, 0.6, 100, 1],
+      "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 7, 0.3, 15, 1],
+      "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 7, 2, 15, 30],
+      "heatmap-color": [
+        "interpolate",
+        ["linear"],
+        ["heatmap-density"],
+        0,
+        "rgba(0,0,0,0)",
+        0.2,
+        "rgba(59,130,246,0.5)",
+        0.4,
+        "rgba(34,197,94,0.6)",
+        0.6,
+        "rgba(250,204,21,0.7)",
+        0.8,
+        "rgba(249,115,22,0.8)",
+        1,
+        "rgba(239,68,68,0.9)",
+      ],
+      "heatmap-opacity": 0.8,
+    },
+  };
+
+  // Non-clustered geojson for heatmap
+  const heatmapGeojson = useMemo(
+    () => ({
+      type: "FeatureCollection" as const,
+      features: offers.map((offer) => ({
+        type: "Feature" as const,
+        geometry: {
+          type: "Point" as const,
+          coordinates: [offer.longitude, offer.latitude],
+        },
+        properties: {
+          discountPercent: offer.discountPercent,
+        },
+      })),
+    }),
+    [offers],
+  );
+
   return (
-    <Source
-      id="offers"
-      type="geojson"
-      data={geojson}
-      cluster={true}
-      clusterMaxZoom={14}
-      clusterRadius={50}
-      clusterProperties={{
-        maxDiscount: ["max", ["get", "discountPercent"]],
-      }}
-    >
-      <Layer {...offerGlowLayer} />
-      <Layer {...clusterRingLayer} />
-      <Layer {...clusterLayer} />
-      <Layer {...clusterCountLayer} />
-      <Layer {...clusterLabelLayer} />
-      <Layer {...clusterDealLayer} />
-      <Layer {...offerLayer} />
-      <Layer {...offerLabelLayer} />
-    </Source>
+    <>
+      {/* Bubble mode layers */}
+      <Source
+        id="offers"
+        type="geojson"
+        data={geojson}
+        cluster={true}
+        clusterMaxZoom={14}
+        clusterRadius={50}
+        clusterProperties={{
+          maxDiscount: ["max", ["get", "discountPercent"]],
+        }}
+      >
+        {mode === "bubbles" && (
+          <>
+            <Layer {...offerGlowLayer} />
+            <Layer {...clusterRingLayer} />
+            <Layer {...clusterLayer} />
+            <Layer {...clusterCountLayer} />
+            <Layer {...clusterLabelLayer} />
+            <Layer {...clusterDealLayer} />
+            <Layer {...offerLayer} />
+            <Layer {...offerLabelLayer} />
+          </>
+        )}
+      </Source>
+
+      {/* Heatmap mode layer */}
+      {mode === "heatmap" && (
+        <Source id="offers-heatmap" type="geojson" data={heatmapGeojson}>
+          <Layer {...heatmapLayer} />
+        </Source>
+      )}
+    </>
   );
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const INTERACTIVE_LAYER_IDS = ["offer-points", "clusters"];
+// eslint-disable-next-line react-refresh/only-export-components
+export const HEATMAP_INTERACTIVE_LAYER_IDS: string[] = [];

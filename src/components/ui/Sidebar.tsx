@@ -4,8 +4,12 @@ import { useTranslation } from "@/lib/i18n";
 import type { UserLocation } from "@/lib/location";
 import type { Offer, SortOption } from "@/types/offer";
 import { CategoryFilter } from "../offers/CategoryFilter";
+import { DealOfTheDay } from "../offers/DealOfTheDay";
 import { OfferCard } from "../offers/OfferCard";
 import { SearchBar } from "../offers/SearchBar";
+import { PullToRefresh } from "./PullToRefresh";
+import { SidebarSkeleton } from "./SidebarSkeleton";
+import { SwipeableCard } from "./SwipeableCard";
 
 export type PriceRange = "all" | "0-500" | "500-2000" | "2000-5000" | "5000+";
 export type DateFilter = "all" | "today" | "week" | "month";
@@ -32,6 +36,11 @@ interface SidebarProps {
   onPriceRangeChange: (range: PriceRange) => void;
   dateFilter: DateFilter;
   onDateFilterChange: (filter: DateFilter) => void;
+  isLoading?: boolean;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  dealOfTheDay?: Offer | null;
+  onShowNotificationSettings?: () => void;
 }
 
 const SORT_OPTIONS: {
@@ -92,14 +101,34 @@ export const Sidebar = memo(function Sidebar({
   onPriceRangeChange,
   dateFilter,
   onDateFilterChange,
+  isLoading,
+  isOpen: controlledOpen,
+  onOpenChange,
+  dealOfTheDay,
+  onShowNotificationSettings,
 }: SidebarProps) {
   const { t } = useTranslation();
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setIsOpen = onOpenChange ?? setInternalOpen;
   const [dragStartY, setDragStartY] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches,
   );
   const sheetRef = useRef<HTMLDivElement>(null);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => {
+    try {
+      const data = JSON.parse(localStorage.getItem("offerlagbe_dismissed") || "{}");
+      const now = Date.now();
+      const validIds = new Set<string>();
+      for (const [id, ts] of Object.entries(data)) {
+        if (now - (ts as number) < 24 * 60 * 60 * 1000) validIds.add(id);
+      }
+      return validIds;
+    } catch {
+      return new Set();
+    }
+  });
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     setDragStartY(e.touches[0].clientY);
@@ -112,7 +141,7 @@ export const Sidebar = memo(function Sidebar({
       if (delta > 80) setIsOpen(false);
       setDragStartY(null);
     },
-    [dragStartY],
+    [dragStartY, setIsOpen],
   );
 
   const activeFilterCount =
@@ -126,6 +155,7 @@ export const Sidebar = memo(function Sidebar({
       {/* Mobile toggle */}
       <button
         onClick={() => setIsOpen(!isOpen)}
+        data-tour="sidebar"
         className="md:hidden fixed bottom-5 left-4 z-40 glass rounded-2xl w-12 h-12 flex items-center justify-center shadow-xl hover:bg-glass-hover active:scale-95 transition-all"
         aria-label={isOpen ? "Close offers panel" : "Open offers panel"}
       >
@@ -245,6 +275,23 @@ export const Sidebar = memo(function Sidebar({
                 {bookmarkedIds.size > 0 && <span>{bookmarkedIds.size}</span>}
               </button>
 
+              {/* Notify Me */}
+              {onShowNotificationSettings && (
+                <button
+                  onClick={onShowNotificationSettings}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium transition-all active:scale-95 bg-slate-800/40 text-slate-500 hover:bg-slate-800/60 hover:text-amber-300"
+                  aria-label="Notification settings"
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                    />
+                  </svg>
+                </button>
+              )}
+
               {/* Clear filters */}
               {activeCategories.size > 0 && (
                 <button
@@ -260,175 +307,209 @@ export const Sidebar = memo(function Sidebar({
           </div>
 
           {/* Scrollable content — trending, bestThisWeek, filters, offers all scroll together */}
-          <div className="flex-1 overflow-y-auto">
-            {/* Trending section */}
-            {trendingOffers.length > 0 && (
-              <div className="px-3.5 sm:px-4 pb-2">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <span className="text-sm">🔥</span>
-                  <span className="text-[11px] font-semibold text-orange-400 uppercase tracking-wide">
-                    {t("sidebar.trending")}
-                  </span>
-                </div>
-                <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
-                  {trendingOffers.map((offer) => (
-                    <button
-                      key={offer._id}
-                      onClick={() => onOfferClick?.(offer)}
-                      className="flex-shrink-0 snap-start w-[140px] bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/20 rounded-xl px-2.5 py-2 text-left transition-all active:scale-[0.97] group"
-                    >
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-xs">🏷️</span>
-                        <span className="text-[10px] text-slate-500 truncate font-medium">{offer.storeName}</span>
-                      </div>
-                      <p className="text-[11px] text-white font-medium truncate group-hover:text-indigo-300 transition-colors leading-snug">
-                        {offer.title}
-                      </p>
-                      <span className="text-[11px] font-bold text-emerald-400 mt-0.5 block">
-                        {offer.discountPercent}% {t("offer.off")}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+          <PullToRefresh>
+            <div className="flex-1 overflow-y-auto">
+              {/* Loading skeleton */}
+              {isLoading && <SidebarSkeleton />}
 
-            {/* Best This Week */}
-            {bestThisWeek.length > 0 && (
-              <div className="px-3.5 sm:px-4 pb-2">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <span className="text-sm">⭐</span>
-                  <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wide">
-                    {t("sidebar.bestThisWeek")}
-                  </span>
+              {/* Deal of the Day */}
+              {!isLoading && dealOfTheDay && (
+                <div className="px-3.5 sm:px-4 pb-2">
+                  <DealOfTheDay offer={dealOfTheDay} onClick={() => onOfferClick?.(dealOfTheDay)} />
                 </div>
-                <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
-                  {bestThisWeek.map((offer) => (
-                    <button
-                      key={offer._id}
-                      onClick={() => onOfferClick?.(offer)}
-                      className="flex-shrink-0 snap-start w-[140px] bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/20 rounded-xl px-2.5 py-2 text-left transition-all active:scale-[0.97] group"
-                    >
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-xs">🏷️</span>
-                        <span className="text-[10px] text-slate-500 truncate font-medium">{offer.storeName}</span>
-                      </div>
-                      <p className="text-[11px] text-white font-medium truncate group-hover:text-amber-300 transition-colors leading-snug">
-                        {offer.title}
-                      </p>
-                      <span className="text-[11px] font-bold text-emerald-400 mt-0.5 block">
-                        {offer.discountPercent}% {t("offer.off")}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* Collapsible filter panel */}
-            {showFilters && (
-              <>
-                {/* Sort pills */}
-                <div className="px-3.5 sm:px-4 pb-2 flex gap-1.5 overflow-x-auto">
-                  {SORT_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => onSortChange(opt.value)}
-                      disabled={opt.value === "nearest" && !userLocation}
-                      className={`flex-shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all active:scale-95 ${
-                        sortBy === opt.value
-                          ? "bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-500/40"
-                          : "bg-slate-800/40 text-slate-500 hover:bg-slate-800/60 hover:text-slate-300"
-                      } disabled:opacity-30 disabled:pointer-events-none`}
-                    >
-                      {t(opt.labelKey)}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Categories */}
-                <div className="px-3.5 sm:px-4 pb-2.5">
-                  <CategoryFilter activeCategories={activeCategories} onToggle={onToggleCategory} />
-                </div>
-
-                {/* Price range pills */}
-                <div className="px-3.5 sm:px-4 pb-2 flex gap-1.5 overflow-x-auto">
-                  <span className="text-[10px] text-slate-600 font-medium flex-shrink-0 self-center">
-                    {t("filter.price")}:
-                  </span>
-                  {PRICE_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => onPriceRangeChange(opt.value)}
-                      className={`flex-shrink-0 px-2 py-1 rounded-lg text-[10px] font-medium transition-all active:scale-95 ${
-                        priceRange === opt.value
-                          ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40"
-                          : "bg-slate-800/40 text-slate-500 hover:bg-slate-800/60 hover:text-slate-300"
-                      }`}
-                    >
-                      {t(opt.labelKey)}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Date filter pills */}
-                <div className="px-3.5 sm:px-4 pb-2 flex gap-1.5 overflow-x-auto">
-                  <span className="text-[10px] text-slate-600 font-medium flex-shrink-0 self-center">
-                    {t("filter.date")}:
-                  </span>
-                  {DATE_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => onDateFilterChange(opt.value)}
-                      className={`flex-shrink-0 px-2 py-1 rounded-lg text-[10px] font-medium transition-all active:scale-95 ${
-                        dateFilter === opt.value
-                          ? "bg-purple-500/20 text-purple-300 ring-1 ring-purple-500/40"
-                          : "bg-slate-800/40 text-slate-500 hover:bg-slate-800/60 hover:text-slate-300"
-                      }`}
-                    >
-                      {t(opt.labelKey)}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* Offer list */}
-            <div className="px-3.5 sm:px-4 pb-4 space-y-2">
-              {offers.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-slate-800/60 flex items-center justify-center mb-3">
-                    <svg
-                      className="w-7 h-7 text-slate-600"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
+              {/* Trending section */}
+              {trendingOffers.length > 0 && (
+                <div className="px-3.5 sm:px-4 pb-2">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-sm">🔥</span>
+                    <span className="text-[11px] font-semibold text-orange-400 uppercase tracking-wide">
+                      {t("sidebar.trending")}
+                    </span>
                   </div>
-                  <p className="text-sm font-medium text-slate-400">{t("sidebar.noOffers")}</p>
-                  <p className="text-xs text-slate-600 mt-1">{t("sidebar.noOffersHint")}</p>
+                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
+                    {trendingOffers.map((offer) => (
+                      <button
+                        key={offer._id}
+                        onClick={() => onOfferClick?.(offer)}
+                        className="flex-shrink-0 snap-start w-[140px] bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/20 rounded-xl px-2.5 py-2 text-left transition-all active:scale-[0.97] group"
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="text-xs">🏷️</span>
+                          <span className="text-[10px] text-slate-500 truncate font-medium">{offer.storeName}</span>
+                        </div>
+                        <p className="text-[11px] text-white font-medium truncate group-hover:text-indigo-300 transition-colors leading-snug">
+                          {offer.title}
+                        </p>
+                        <span className="text-[11px] font-bold text-emerald-400 mt-0.5 block">
+                          {offer.discountPercent}% {t("offer.off")}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              ) : (
-                offers.map((offer) => (
-                  <OfferCard
-                    key={offer._id}
-                    offer={offer}
-                    userLocation={userLocation}
-                    onClick={() => onOfferClick?.(offer)}
-                    isBookmarked={bookmarkedIds.has(offer._id)}
-                    onToggleBookmark={onToggleBookmark}
-                  />
-                ))
+              )}
+
+              {/* Best This Week */}
+              {bestThisWeek.length > 0 && (
+                <div className="px-3.5 sm:px-4 pb-2">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-sm">⭐</span>
+                    <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wide">
+                      {t("sidebar.bestThisWeek")}
+                    </span>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
+                    {bestThisWeek.map((offer) => (
+                      <button
+                        key={offer._id}
+                        onClick={() => onOfferClick?.(offer)}
+                        className="flex-shrink-0 snap-start w-[140px] bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/20 rounded-xl px-2.5 py-2 text-left transition-all active:scale-[0.97] group"
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="text-xs">🏷️</span>
+                          <span className="text-[10px] text-slate-500 truncate font-medium">{offer.storeName}</span>
+                        </div>
+                        <p className="text-[11px] text-white font-medium truncate group-hover:text-amber-300 transition-colors leading-snug">
+                          {offer.title}
+                        </p>
+                        <span className="text-[11px] font-bold text-emerald-400 mt-0.5 block">
+                          {offer.discountPercent}% {t("offer.off")}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Collapsible filter panel */}
+              {showFilters && (
+                <>
+                  {/* Sort pills */}
+                  <div className="px-3.5 sm:px-4 pb-2 flex gap-1.5 overflow-x-auto">
+                    {SORT_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => onSortChange(opt.value)}
+                        disabled={opt.value === "nearest" && !userLocation}
+                        className={`flex-shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all active:scale-95 ${
+                          sortBy === opt.value
+                            ? "bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-500/40"
+                            : "bg-slate-800/40 text-slate-500 hover:bg-slate-800/60 hover:text-slate-300"
+                        } disabled:opacity-30 disabled:pointer-events-none`}
+                      >
+                        {t(opt.labelKey)}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Categories */}
+                  <div className="px-3.5 sm:px-4 pb-2.5">
+                    <CategoryFilter activeCategories={activeCategories} onToggle={onToggleCategory} />
+                  </div>
+
+                  {/* Price range pills */}
+                  <div className="px-3.5 sm:px-4 pb-2 flex gap-1.5 overflow-x-auto">
+                    <span className="text-[10px] text-slate-600 font-medium flex-shrink-0 self-center">
+                      {t("filter.price")}:
+                    </span>
+                    {PRICE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => onPriceRangeChange(opt.value)}
+                        className={`flex-shrink-0 px-2 py-1 rounded-lg text-[10px] font-medium transition-all active:scale-95 ${
+                          priceRange === opt.value
+                            ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40"
+                            : "bg-slate-800/40 text-slate-500 hover:bg-slate-800/60 hover:text-slate-300"
+                        }`}
+                      >
+                        {t(opt.labelKey)}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Date filter pills */}
+                  <div className="px-3.5 sm:px-4 pb-2 flex gap-1.5 overflow-x-auto">
+                    <span className="text-[10px] text-slate-600 font-medium flex-shrink-0 self-center">
+                      {t("filter.date")}:
+                    </span>
+                    {DATE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => onDateFilterChange(opt.value)}
+                        className={`flex-shrink-0 px-2 py-1 rounded-lg text-[10px] font-medium transition-all active:scale-95 ${
+                          dateFilter === opt.value
+                            ? "bg-purple-500/20 text-purple-300 ring-1 ring-purple-500/40"
+                            : "bg-slate-800/40 text-slate-500 hover:bg-slate-800/60 hover:text-slate-300"
+                        }`}
+                      >
+                        {t(opt.labelKey)}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Offer list */}
+              {!isLoading && (
+                <div className="px-3.5 sm:px-4 pb-4 space-y-2">
+                  {offers.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <div className="w-14 h-14 rounded-2xl bg-slate-800/60 flex items-center justify-center mb-3">
+                        <svg
+                          className="w-7 h-7 text-slate-600"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                          />
+                        </svg>
+                      </div>
+                      <p className="text-sm font-medium text-slate-400">{t("sidebar.noOffers")}</p>
+                      <p className="text-xs text-slate-600 mt-1">{t("sidebar.noOffersHint")}</p>
+                    </div>
+                  ) : (
+                    offers
+                      .filter((o) => !dismissedIds.has(o._id))
+                      .map((offer) => (
+                        <SwipeableCard
+                          key={offer._id}
+                          onSwipeRight={() => onToggleBookmark(offer._id)}
+                          onSwipeLeft={() => {
+                            setDismissedIds((prev) => {
+                              const next = new Set(prev);
+                              next.add(offer._id);
+                              try {
+                                const data = JSON.parse(localStorage.getItem("offerlagbe_dismissed") || "{}");
+                                data[offer._id] = Date.now();
+                                localStorage.setItem("offerlagbe_dismissed", JSON.stringify(data));
+                              } catch {
+                                /* ignore */
+                              }
+                              return next;
+                            });
+                          }}
+                        >
+                          <OfferCard
+                            offer={offer}
+                            userLocation={userLocation}
+                            onClick={() => onOfferClick?.(offer)}
+                            isBookmarked={bookmarkedIds.has(offer._id)}
+                            onToggleBookmark={onToggleBookmark}
+                          />
+                        </SwipeableCard>
+                      ))
+                  )}
+                </div>
               )}
             </div>
-          </div>
+          </PullToRefresh>
         </div>
       </aside>
 

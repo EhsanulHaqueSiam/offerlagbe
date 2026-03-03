@@ -60,7 +60,7 @@ export const create = mutation({
       }
     }
 
-    return await ctx.db.insert("comments", {
+    const commentId = await ctx.db.insert("comments", {
       offerId: args.offerId,
       visitorId: args.visitorId,
       text,
@@ -68,6 +68,14 @@ export const create = mutation({
       upvotes: 0,
       createdAt: Date.now(),
     });
+
+    // Increment offer's commentCount
+    const offer = await ctx.db.get(args.offerId);
+    if (offer) {
+      await ctx.db.patch(args.offerId, { commentCount: (offer.commentCount ?? 0) + 1 });
+    }
+
+    return commentId;
   },
 });
 
@@ -84,5 +92,11 @@ export const remove = mutation({
       throw new Error("Cannot delete another user's comment");
     }
     await ctx.db.delete(args.commentId);
+
+    // Decrement offer's commentCount
+    const offer = await ctx.db.get(comment.offerId);
+    if (offer && (offer.commentCount ?? 0) > 0) {
+      await ctx.db.patch(comment.offerId, { commentCount: (offer.commentCount ?? 0) - 1 });
+    }
   },
 });

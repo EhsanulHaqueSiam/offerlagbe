@@ -9,9 +9,10 @@ import MapGL, {
   type ViewStateChangeEvent,
 } from "react-map-gl/maplibre";
 import { BANGLADESH_CENTER, DEFAULT_ZOOM } from "@/lib/geo";
+import { useTranslation } from "@/lib/i18n";
 import type { UserLocation } from "@/lib/location";
 import type { Offer } from "@/types/offer";
-import { INTERACTIVE_LAYER_IDS, OfferBubbles } from "./OfferBubbles";
+import { INTERACTIVE_LAYER_IDS, type MapMode, OfferBubbles } from "./OfferBubbles";
 import { OfferPopup } from "./OfferPopup";
 
 const MAP_STYLE = "https://tiles.openfreemap.org/styles/positron";
@@ -53,6 +54,8 @@ export function OfferMap({
     zoom: userLocation ? 13 : DEFAULT_ZOOM,
   });
   const [internalSelected, setInternalSelected] = useState<Offer | null>(null);
+  const [mapMode, setMapMode] = useState<MapMode>("bubbles");
+  const { t } = useTranslation();
 
   const selectedOffer = controlledSelected !== undefined ? controlledSelected : internalSelected;
   const setSelectedOffer = onSelectOffer ?? setInternalSelected;
@@ -64,6 +67,21 @@ export function OfferMap({
     }
     return lookup;
   }, [offers]);
+
+  // Fly to selected offer when it changes (e.g., from sidebar click)
+  const prevSelectedId = useRef<string | null>(null);
+  const zoomRef = useRef(viewState.zoom);
+  zoomRef.current = viewState.zoom;
+  useEffect(() => {
+    if (!selectedOffer || !mapRef.current) return;
+    if (selectedOffer._id === prevSelectedId.current) return;
+    prevSelectedId.current = selectedOffer._id;
+    mapRef.current.flyTo({
+      center: [selectedOffer.longitude, selectedOffer.latitude],
+      zoom: Math.max(zoomRef.current, 15),
+      duration: 1000,
+    });
+  }, [selectedOffer]);
 
   // Fly to user location when it changes (auto-detect or manual set)
   const prevLocationKey = useRef(userLocation ? `${userLocation.latitude},${userLocation.longitude}` : null);
@@ -128,7 +146,7 @@ export function OfferMap({
         {...viewState}
         onMove={handleMove}
         onClick={handleClick}
-        interactiveLayerIds={pickMode ? undefined : INTERACTIVE_LAYER_IDS}
+        interactiveLayerIds={pickMode ? undefined : mapMode === "bubbles" ? INTERACTIVE_LAYER_IDS : undefined}
         mapStyle={MAP_STYLE}
         style={{ width: "100%", height: "100%" }}
         cursor={pickMode ? "crosshair" : "grab"}
@@ -144,7 +162,7 @@ export function OfferMap({
           }
         />
 
-        <OfferBubbles offers={offers} />
+        <OfferBubbles offers={offers} mode={mapMode} />
 
         {/* User location marker */}
         {userLocation && !pickMode && (
@@ -184,6 +202,42 @@ export function OfferMap({
           </Marker>
         )}
       </MapGL>
+
+      {/* Heatmap toggle */}
+      {!pickMode && (
+        <div className="absolute top-20 left-3 z-20">
+          <button
+            onClick={() => setMapMode((m) => (m === "bubbles" ? "heatmap" : "bubbles"))}
+            className="glass rounded-xl px-3 py-2 flex items-center gap-1.5 shadow-lg hover:bg-glass-hover transition-all active:scale-95 text-xs font-medium text-slate-300"
+            aria-label="Toggle map mode"
+          >
+            {mapMode === "bubbles" ? (
+              <>
+                <svg className="w-3.5 h-3.5 text-orange-400" fill="currentColor" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10" opacity="0.3" />
+                  <circle cx="12" cy="12" r="6" opacity="0.6" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                {t("map.heatmap")}
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-3.5 h-3.5 text-indigo-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <circle cx="12" cy="12" r="3" />
+                  <circle cx="12" cy="12" r="8" opacity="0.4" />
+                </svg>
+                {t("map.bubbles")}
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {pickMode && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20">

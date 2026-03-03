@@ -5,9 +5,11 @@ import { CATEGORY_MAP } from "@/lib/categories";
 import { isExpiringSoon } from "@/lib/expiry";
 import { useTranslation } from "@/lib/i18n";
 import { formatDistance, getDistanceKm, type UserLocation } from "@/lib/location";
+import { shareOffer } from "@/lib/share";
 import type { Offer } from "@/types/offer";
 import { TrustBadge } from "../voting/TrustBadge";
 import { CountdownTimer } from "./CountdownTimer";
+import { VerificationBadge } from "./VerificationBadge";
 
 interface OfferCardProps {
   offer: Offer;
@@ -76,6 +78,7 @@ export const OfferCard = memo(function OfferCard({
                 {t("offer.flagged")}
               </span>
             )}
+            <VerificationBadge upvotes={offer.upvotes} commentCount={offer.commentCount} compact />
             {isExpiringSoon(offer.endDate) && <CountdownTimer endDate={offer.endDate!} compact />}
           </div>
           <h4 className="text-sm font-medium text-white truncate group-hover:text-indigo-300 transition-colors leading-snug">
@@ -106,19 +109,24 @@ export const OfferCard = memo(function OfferCard({
           </div>
         </div>
 
-        {/* Bookmark */}
-        {onToggleBookmark && (
+        {/* Share + Bookmark */}
+        <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onToggleBookmark(offer._id);
+              shareOffer({
+                title: offer.title,
+                storeName: offer.storeName,
+                discountPercent: offer.discountPercent,
+                offerId: offer._id,
+              });
             }}
-            className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-800/60 transition-all active:scale-90"
-            aria-label={isBookmarked ? "Remove bookmark" : "Save offer"}
+            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-800/60 transition-all active:scale-90"
+            aria-label="Share offer"
           >
             <svg
-              className={`w-3.5 h-3.5 transition-colors ${isBookmarked ? "text-pink-400 fill-pink-400" : "text-slate-600 hover:text-pink-300"}`}
-              fill={isBookmarked ? "currentColor" : "none"}
+              className="w-3.5 h-3.5 text-slate-600 hover:text-indigo-300 transition-colors"
+              fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
               strokeWidth={2}
@@ -126,11 +134,35 @@ export const OfferCard = memo(function OfferCard({
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
               />
             </svg>
           </button>
-        )}
+          {onToggleBookmark && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleBookmark(offer._id);
+              }}
+              className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-800/60 transition-all active:scale-90"
+              aria-label={isBookmarked ? "Remove bookmark" : "Save offer"}
+            >
+              <svg
+                className={`w-3.5 h-3.5 transition-colors ${isBookmarked ? "text-pink-400 fill-pink-400" : "text-slate-600 hover:text-pink-300"}`}
+                fill={isBookmarked ? "currentColor" : "none"}
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tags */}
@@ -161,7 +193,7 @@ export const OfferCard = memo(function OfferCard({
                 d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
               />
             </svg>
-            <span className="truncate">{offer.address}</span>
+            <span className="truncate">{offer.address || offer.storeName}</span>
           </div>
           {distance !== null && (
             <span className="text-[10px] text-indigo-400 font-medium flex-shrink-0">{formatDistance(distance)}</span>
@@ -177,6 +209,22 @@ export const OfferCard = memo(function OfferCard({
                 />
               </svg>
               {offer.views}
+            </div>
+          )}
+          {(offer.verificationCount ?? 0) > 0 && (
+            <div
+              className="flex items-center gap-0.5 text-[10px] text-emerald-500 flex-shrink-0"
+              title="Photo verified"
+            >
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              {offer.verificationCount}
             </div>
           )}
         </div>

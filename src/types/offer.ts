@@ -16,7 +16,8 @@ export interface Offer {
   offerPrice?: number;
   latitude: number;
   longitude: number;
-  address: string;
+  address?: string;
+  googleMapsUrl?: string;
   storeName: string;
   logoUrl: string | null;
   imageUrls: string[];
@@ -28,6 +29,8 @@ export interface Offer {
   views?: number;
   couponCode?: string;
   tags?: string[];
+  commentCount?: number;
+  verificationCount?: number;
   createdAt: number;
 }
 

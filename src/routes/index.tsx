@@ -2,8 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { OfferMap } from "@/components/map/OfferMap";
+import { NotificationSettings } from "@/components/notifications/NotificationSettings";
+import { BackToMapFAB } from "@/components/ui/BackToMapFAB";
 import { Header } from "@/components/ui/Header";
 import { LocationSettings } from "@/components/ui/LocationSettings";
+import { OnboardingTour } from "@/components/ui/OnboardingTour";
 import type { DateFilter, PriceRange } from "@/components/ui/Sidebar";
 import { Sidebar } from "@/components/ui/Sidebar";
 import { useNewOfferNotification } from "@/hooks/useNewOfferNotification";
@@ -43,6 +46,8 @@ function HomePage() {
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [priceRange, setPriceRange] = useState<PriceRange>("all");
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
 
   // Offline support
   const { cachedOffers, isOffline } = useOfflineOffers();
@@ -75,8 +80,27 @@ function HomePage() {
       .slice(0, 10);
   }, [allOffers]);
 
+  // Deal of the Day: top-scoring offer from last 7 days with at least 3 upvotes
+  const dealOfTheDay = useMemo(() => {
+    if (!allOffers) return null;
+    const now = Date.now(); // eslint-disable-line react-hooks/purity
+    const cutoff = now - 7 * 24 * 60 * 60 * 1000;
+    let best: Offer | null = null;
+    let bestScore = -Infinity;
+    for (const o of allOffers) {
+      if (o.createdAt < cutoff || o.upvotes < 3) continue;
+      if (o.endDate && new Date(o.endDate).getTime() < now) continue;
+      const score = o.upvotes - o.downvotes;
+      if (score > bestScore) {
+        bestScore = score;
+        best = o;
+      }
+    }
+    return best;
+  }, [allOffers]);
+
   // Live notification when new offers are added
-  useNewOfferNotification(allOffers, setSelectedOffer);
+  useNewOfferNotification(allOffers, setSelectedOffer, userLocation);
 
   // Ask for location on first visit if not already saved
   // biome-ignore lint/correctness/useExhaustiveDependencies: run once on mount
@@ -213,6 +237,7 @@ function HomePage() {
 
   const handleOfferClick = useCallback((offer: Offer) => {
     setSelectedOffer(offer);
+    setSidebarOpen(false);
   }, []);
 
   const handleToggleNearMe = useCallback(() => {
@@ -234,26 +259,7 @@ function HomePage() {
     setUserLocation(newLoc);
   }, []);
 
-  // Loading state (skip if offline with cached data)
-  if (allOffers === undefined && !isOffline) {
-    return (
-      <div className="h-full w-full flex items-center justify-center bg-slate-950 overflow-locked">
-        <div className="flex flex-col items-center gap-3 animate-fade-in">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-              />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </div>
-          <p className="text-sm text-slate-400 font-medium">{t("loading.offers")}</p>
-        </div>
-      </div>
-    );
-  }
+  const isLoading = allOffers === undefined && !isOffline;
 
   return (
     <div className="relative h-full w-full overflow-locked">
@@ -295,11 +301,23 @@ function HomePage() {
         onPriceRangeChange={setPriceRange}
         dateFilter={dateFilter}
         onDateFilterChange={setDateFilter}
+        isLoading={isLoading}
+        isOpen={sidebarOpen}
+        onOpenChange={setSidebarOpen}
+        dealOfTheDay={dealOfTheDay}
+        onShowNotificationSettings={() => setShowNotificationSettings(true)}
       />
+
+      {/* Back to Map FAB (mobile) */}
+      {sidebarOpen && <BackToMapFAB onClick={() => setSidebarOpen(false)} />}
 
       {showLocationSettings && (
         <LocationSettings onClose={() => setShowLocationSettings(false)} onLocationChange={setUserLocation} />
       )}
+
+      {showNotificationSettings && <NotificationSettings onClose={() => setShowNotificationSettings(false)} />}
+
+      <OnboardingTour />
     </div>
   );
 }

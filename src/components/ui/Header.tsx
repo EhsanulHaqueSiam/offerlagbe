@@ -69,6 +69,7 @@ export const Header = memo(function Header({ onOpenLocationSettings, userLocatio
           {/* Location setting */}
           <button
             onClick={onOpenLocationSettings}
+            data-tour="location"
             className={`glass rounded-xl px-3 py-2.5 flex items-center gap-2 transition-all shadow-lg active:scale-[0.98] ${
               savedLoc ? "hover:bg-glass-hover" : "hover:bg-glass-hover ring-1 ring-indigo-500/30"
             }`}

@@ -46,9 +46,11 @@ function LeaderboardPage() {
               const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : null;
 
               return (
-                <div
-                  key={entry.submitterId}
-                  className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-colors ${
+                <Link
+                  key={entry.storeName}
+                  to="/store/$name"
+                  params={{ name: entry.storeName }}
+                  className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-colors hover:bg-slate-800/40 ${
                     rank <= 3 ? "bg-indigo-500/5 border-indigo-500/20" : "bg-slate-800/30 border-slate-700/20"
                   }`}
                 >
@@ -61,25 +63,24 @@ function LeaderboardPage() {
                     )}
                   </div>
 
-                  {/* Contributor info */}
+                  {/* Store info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                        style={{
-                          backgroundColor: `hsl(${parseInt(entry.submitterId.slice(0, 6), 16) % 360}, 60%, 45%)`,
-                        }}
-                      >
-                        {entry.submitterId.slice(0, 2).toUpperCase()}
-                      </div>
-                      <span className="text-sm font-medium text-white">#{entry.submitterId.slice(0, 6)}</span>
+                      <span className="text-sm font-medium text-white truncate">{entry.storeName}</span>
+                      {entry.activeCount > 0 && (
+                        <span className="text-[9px] bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded-full font-medium flex-shrink-0">
+                          {entry.activeCount} {t("leaderboard.active")}
+                        </span>
+                      )}
                     </div>
                     <p className="text-[10px] text-slate-500 mt-0.5">
                       {t("leaderboard.offerCount").replace("{n}", String(entry.offerCount))}
+                      {" · "}
+                      {t("leaderboard.bestDiscount").replace("{n}", String(entry.bestDiscount))}
                     </p>
                   </div>
 
-                  {/* Upvotes */}
+                  {/* Net score */}
                   <div className="flex items-center gap-1 text-sm font-bold text-emerald-400 flex-shrink-0">
                     <svg
                       className="w-3.5 h-3.5"
@@ -90,9 +91,9 @@ function LeaderboardPage() {
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
                     </svg>
-                    {entry.totalUpvotes}
+                    {entry.netScore}
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

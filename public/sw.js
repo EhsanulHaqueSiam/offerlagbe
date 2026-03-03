@@ -146,7 +146,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   // Everything else — network-first with cache fallback (same-origin only)
-  if (url.origin === self.location.origin) {
+  if (url.origin === location.origin) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
@@ -159,4 +159,49 @@ self.addEventListener("fetch", (event) => {
         .catch(() => caches.match(event.request)),
     );
   }
+});
+
+// Push notification handler
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+
+  try {
+    const data = event.data.json();
+    const title = data.title || "New Offer";
+    const options = {
+      body: data.body || "",
+      icon: "/icon-192.svg",
+      badge: "/icon-192.svg",
+      data: { url: data.url || "/" },
+      tag: data.tag || "offer-notification",
+    };
+    event.waitUntil(self.registration.showNotification(title, options));
+  } catch {
+    // Fallback for plain text push
+    event.waitUntil(
+      self.registration.showNotification("OfferLagbe", {
+        body: event.data.text(),
+        icon: "/icon-192.svg",
+      }),
+    );
+  }
+});
+
+// Notification click handler — open the offer page
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || "/";
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      // Focus existing tab if found
+      for (const client of clientList) {
+        if (client.url.includes(url) && "focus" in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise open new tab
+      return self.clients.openWindow(url);
+    }),
+  );
 });

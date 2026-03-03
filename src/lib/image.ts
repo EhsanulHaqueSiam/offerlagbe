@@ -1,7 +1,7 @@
 const MAX_WIDTH = 1200;
 const MAX_HEIGHT = 1200;
-const QUALITY = 0.75;
-const MAX_SIZE_BYTES = 400 * 1024; // 400KB target
+const QUALITY = 0.7;
+const MAX_SIZE_BYTES = 300 * 1024; // 300KB target
 
 function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -25,6 +25,16 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number):
   });
 }
 
+let _webpSupported: boolean | null = null;
+function supportsWebP(): boolean {
+  if (_webpSupported !== null) return _webpSupported;
+  const canvas = document.createElement("canvas");
+  canvas.width = 1;
+  canvas.height = 1;
+  _webpSupported = canvas.toDataURL("image/webp").startsWith("data:image/webp");
+  return _webpSupported;
+}
+
 export async function compressImage(file: File): Promise<File> {
   // Skip tiny files or non-images
   if (!file.type.startsWith("image/")) {
@@ -34,17 +44,6 @@ export async function compressImage(file: File): Promise<File> {
   // Reject SVGs — potential XSS vector
   if (file.type === "image/svg+xml") {
     throw new Error("SVG files are not supported");
-  }
-
-  // If already small enough, just return
-  if (file.size <= MAX_SIZE_BYTES) {
-    // Still resize if dimensions are huge
-    const img = await loadImage(file);
-    if (img.width <= MAX_WIDTH && img.height <= MAX_HEIGHT) {
-      URL.revokeObjectURL(img.src);
-      return file;
-    }
-    URL.revokeObjectURL(img.src);
   }
 
   const img = await loadImage(file);
@@ -69,17 +68,21 @@ export async function compressImage(file: File): Promise<File> {
   ctx.drawImage(img, 0, 0, width, height);
   URL.revokeObjectURL(img.src);
 
-  // Try JPEG first (smaller), then WebP
-  let blob = await canvasToBlob(canvas, "image/jpeg", QUALITY);
+  // Prefer WebP (much smaller), fall back to JPEG
+  const useWebP = supportsWebP();
+  const outputType = useWebP ? "image/webp" : "image/jpeg";
+  const ext = useWebP ? ".webp" : ".jpg";
+
+  let blob = await canvasToBlob(canvas, outputType, QUALITY);
 
   // If still too large, reduce quality progressively
   let quality = QUALITY;
-  while (blob.size > MAX_SIZE_BYTES && quality > 0.3) {
+  while (blob.size > MAX_SIZE_BYTES && quality > 0.2) {
     quality -= 0.1;
-    blob = await canvasToBlob(canvas, "image/jpeg", quality);
+    blob = await canvasToBlob(canvas, outputType, quality);
   }
 
-  // If still too large, reduce dimensions (re-draw from canvas, not revoked img)
+  // If still too large, reduce dimensions
   if (blob.size > MAX_SIZE_BYTES) {
     const scale = Math.sqrt(MAX_SIZE_BYTES / blob.size);
     const srcData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -90,11 +93,11 @@ export async function compressImage(file: File): Promise<File> {
     tmpCanvas.height = srcData.height;
     tmpCanvas.getContext("2d")!.putImageData(srcData, 0, 0);
     ctx.drawImage(tmpCanvas, 0, 0, canvas.width, canvas.height);
-    blob = await canvasToBlob(canvas, "image/jpeg", 0.7);
+    blob = await canvasToBlob(canvas, outputType, 0.6);
   }
 
-  const name = file.name.replace(/\.[^.]+$/, ".jpg");
-  return new File([blob], name, { type: "image/jpeg" });
+  const name = file.name.replace(/\.[^.]+$/, ext);
+  return new File([blob], name, { type: outputType });
 }
 
 export function validateImageFile(file: File): string | null {

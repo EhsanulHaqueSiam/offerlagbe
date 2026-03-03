@@ -11,10 +11,12 @@
 import type * as commentVotes from "../commentVotes.js";
 import type * as comments from "../comments.js";
 import type * as leaderboard from "../leaderboard.js";
+import type * as notifications from "../notifications.js";
 import type * as offers from "../offers.js";
 import type * as reports from "../reports.js";
 import type * as seed from "../seed.js";
 import type * as validators from "../validators.js";
+import type * as verificationPhotos from "../verificationPhotos.js";
 import type * as votes from "../votes.js";
 
 import type {
@@ -27,10 +29,12 @@ declare const fullApi: ApiFromModules<{
   commentVotes: typeof commentVotes;
   comments: typeof comments;
   leaderboard: typeof leaderboard;
+  notifications: typeof notifications;
   offers: typeof offers;
   reports: typeof reports;
   seed: typeof seed;
   validators: typeof validators;
+  verificationPhotos: typeof verificationPhotos;
   votes: typeof votes;
 }>;
 

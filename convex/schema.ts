@@ -11,7 +11,8 @@ export default defineSchema({
     offerPrice: v.optional(v.number()),
     latitude: v.number(),
     longitude: v.number(),
-    address: v.string(),
+    address: v.optional(v.string()),
+    googleMapsUrl: v.optional(v.string()),
     storeName: v.string(),
     logoStorageId: v.optional(v.id("_storage")),
     imageStorageIds: v.array(v.id("_storage")),
@@ -24,6 +25,8 @@ export default defineSchema({
     couponCode: v.optional(v.string()),
     submitterId: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
+    commentCount: v.optional(v.number()),
+    verificationCount: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_category", ["category"])
@@ -71,4 +74,25 @@ export default defineSchema({
   })
     .index("by_comment", ["commentId"])
     .index("by_visitor_comment", ["visitorId", "commentId"]),
+
+  verificationPhotos: defineTable({
+    offerId: v.id("offers"),
+    visitorId: v.string(),
+    storageId: v.id("_storage"),
+    createdAt: v.number(),
+  })
+    .index("by_offer", ["offerId"])
+    .index("by_visitor_offer", ["visitorId", "offerId"]),
+
+  pushSubscriptions: defineTable({
+    visitorId: v.string(),
+    endpoint: v.string(),
+    p256dh: v.string(),
+    auth: v.string(),
+    categories: v.array(v.string()),
+    radius: v.number(),
+    latitude: v.number(),
+    longitude: v.number(),
+    createdAt: v.number(),
+  }).index("by_visitor", ["visitorId"]),
 });

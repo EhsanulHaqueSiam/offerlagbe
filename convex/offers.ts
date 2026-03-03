@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { isValidVisitorId, validateVisitorId } from "./validators";
@@ -106,7 +107,8 @@ export const create = mutation({
     offerPrice: v.optional(v.number()),
     latitude: v.number(),
     longitude: v.number(),
-    address: v.string(),
+    address: v.optional(v.string()),
+    googleMapsUrl: v.optional(v.string()),
     storeName: v.string(),
     logoStorageId: v.optional(v.id("_storage")),
     imageStorageIds: v.array(v.id("_storage")),
@@ -122,8 +124,8 @@ export const create = mutation({
     if (args.description && args.description.length > 1000) throw new Error("Description too long");
     const storeName = args.storeName.trim();
     if (!storeName || storeName.length > 100) throw new Error("Invalid store name");
-    const address = args.address.trim();
-    if (!address || address.length > 300) throw new Error("Invalid address");
+    const address = args.address?.trim() || "";
+    if (address.length > 300) throw new Error("Address too long");
     if (args.discountPercent <= 0 || args.discountPercent > 100) throw new Error("Discount must be 1-100");
     if (args.latitude < -90 || args.latitude > 90) throw new Error("Invalid latitude");
     if (args.longitude < -180 || args.longitude > 180) throw new Error("Invalid longitude");
@@ -154,8 +156,19 @@ export const create = mutation({
       }
     }
 
+    // Scam/fake store detection: auto-flag if store has >50% flagged rate (min 3 prior offers)
+    const storeOffers = await ctx.db.query("offers").collect();
+    const priorStoreOffers = storeOffers.filter((o) => o.storeName.toLowerCase() === storeName.toLowerCase());
+    let initialStatus: "active" | "flagged" = "active";
+    if (priorStoreOffers.length >= 3) {
+      const flaggedCount = priorStoreOffers.filter((o) => o.status === "flagged" || o.status === "removed").length;
+      if (flaggedCount / priorStoreOffers.length > 0.5) {
+        initialStatus = "flagged";
+      }
+    }
+
     const validTags = (args.tags ?? []).filter((t) => ALLOWED_TAGS.includes(t));
-    return await ctx.db.insert("offers", {
+    const offerId = await ctx.db.insert("offers", {
       title,
       description: args.description?.trim() || undefined,
       category: args.category,
@@ -164,7 +177,8 @@ export const create = mutation({
       offerPrice: args.offerPrice,
       latitude: args.latitude,
       longitude: args.longitude,
-      address,
+      address: address || undefined,
+      googleMapsUrl: args.googleMapsUrl?.trim() || undefined,
       storeName,
       logoStorageId: args.logoStorageId,
       imageStorageIds: args.imageStorageIds,
@@ -176,9 +190,21 @@ export const create = mutation({
       upvotes: 0,
       downvotes: 0,
       views: 0,
-      status: "active",
+      status: initialStatus,
       createdAt: Date.now(),
     });
+
+    // Schedule push notifications for matching subscribers
+    await ctx.scheduler.runAfter(0, internal.notifications.sendNotifications, {
+      offerId,
+      category: args.category,
+      latitude: args.latitude,
+      longitude: args.longitude,
+      title,
+      discountPercent: args.discountPercent,
+    });
+
+    return offerId;
   },
 });
 
@@ -198,18 +224,31 @@ export const incrementView = mutation({
 export const checkDuplicate = query({
   args: {
     title: v.string(),
+    storeName: v.string(),
     latitude: v.number(),
     longitude: v.number(),
   },
   handler: async (ctx, args) => {
     if (!args.title.trim()) return [];
+    const now = Date.now();
 
-    const results = await ctx.db
+    // Search by title similarity
+    const titleMatches = await ctx.db
       .query("offers")
       .withSearchIndex("search_title", (q) => q.search("title", args.title).eq("status", "active"))
-      .take(10);
+      .take(20);
 
-    const nearby = results.filter((o) => haversineKm(args.latitude, args.longitude, o.latitude, o.longitude) <= 0.2);
+    // Filter: same location (200m) OR same store name + same location (500m)
+    const storeNameLower = args.storeName.trim().toLowerCase();
+    const nearby = titleMatches.filter((o) => {
+      if (!isActiveOffer(o, now)) return false;
+      const dist = haversineKm(args.latitude, args.longitude, o.latitude, o.longitude);
+      // Exact location match (likely same shop)
+      if (dist <= 0.2) return true;
+      // Same brand within 500m (e.g. same mall complex)
+      if (dist <= 0.5 && o.storeName.toLowerCase() === storeNameLower) return true;
+      return false;
+    });
 
     return nearby.map((o) => ({
       _id: o._id,

@@ -13,6 +13,7 @@ import { toast } from "@/lib/toast";
 import type { Offer } from "@/types/offer";
 import { api } from "../../../convex/_generated/api";
 import { CouponBadge } from "../offers/CouponBadge";
+import { VerificationBadge } from "../offers/VerificationBadge";
 import { ImageLightbox } from "../ui/ImageLightbox";
 import { TrustBadge } from "../voting/TrustBadge";
 import { VoteButtons } from "../voting/VoteButtons";
@@ -122,6 +123,7 @@ export function OfferPopup({ offer, onClose, onBookmarkChange }: OfferPopupProps
                     {isEndingToday(offer.endDate!) ? t("offer.endsToday") : t("offer.expiringSoon")}
                   </span>
                 )}
+                <VerificationBadge upvotes={offer.upvotes} commentCount={offer.commentCount} compact />
               </div>
               <h3 className="text-sm font-semibold text-white leading-snug">{offer.title}</h3>
               <p className="text-xs text-slate-400 mt-0.5">{offer.storeName}</p>
@@ -204,9 +206,9 @@ export function OfferPopup({ offer, onClose, onBookmarkChange }: OfferPopupProps
               />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <span className="truncate flex-1">{offer.address}</span>
+            <span className="truncate flex-1">{offer.address || offer.storeName}</span>
             <a
-              href={getDirectionsUrl(offer.latitude, offer.longitude, offer.storeName)}
+              href={getDirectionsUrl(offer.latitude, offer.longitude, offer.storeName, offer.googleMapsUrl)}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
@@ -299,7 +301,7 @@ export function OfferPopup({ offer, onClose, onBookmarkChange }: OfferPopupProps
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all active:scale-95"
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2zm5.82 13.97c-.25.71-1.47 1.32-2.01 1.41-.51.08-1.16.12-1.87-.12-.43-.15-.99-.35-1.7-.68-2.98-1.29-4.93-4.29-5.08-4.49-.15-.21-1.21-1.62-1.21-3.08 0-1.47.77-2.19 1.04-2.49.27-.3.6-.37.8-.37.2 0 .4 0 .57.01.18.01.43-.07.67.51.25.59.84 2.06.91 2.21.08.15.13.32.03.52-.11.19-.16.31-.31.48-.15.17-.32.37-.46.5-.15.14-.31.29-.13.57.17.28.77 1.27 1.65 2.06 1.14.99 2.09 1.3 2.39 1.44.29.15.46.13.64-.08.17-.2.74-.86.94-1.16.2-.3.4-.25.67-.15.27.1 1.72.81 2.01.96.3.15.5.22.57.34.08.12.08.68-.17 1.39z" />
               </svg>
               WhatsApp
             </a>

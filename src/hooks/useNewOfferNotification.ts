@@ -1,8 +1,14 @@
 import { useEffect, useRef } from "react";
+import type { UserLocation } from "@/lib/location";
+import { getDistanceKm } from "@/lib/location";
 import { toast } from "@/lib/toast";
 import type { Offer } from "@/types/offer";
 
-export function useNewOfferNotification(offers: Offer[] | undefined, onOfferClick?: (offer: Offer) => void) {
+export function useNewOfferNotification(
+  offers: Offer[] | undefined,
+  onOfferClick?: (offer: Offer) => void,
+  userLocation?: UserLocation | null,
+) {
   const prevIdsRef = useRef<Set<string> | null>(null);
   const initializedRef = useRef(false);
 
@@ -20,16 +26,24 @@ export function useNewOfferNotification(offers: Offer[] | undefined, onOfferClic
     const newOffers = offers.filter((o) => !prevIds.has(o._id));
 
     if (newOffers.length > 0) {
-      // Show toast for the newest one
-      const newest = newOffers.sort((a, b) => b.createdAt - a.createdAt)[0];
-      toast(
-        `🆕 ${newest.discountPercent}% OFF at ${newest.storeName}`,
-        "info",
-        6000,
-        onOfferClick ? () => onOfferClick(newest) : undefined,
-      );
+      // Only notify for offers within 10km of user (or all if no location)
+      const nearby = userLocation
+        ? newOffers.filter(
+            (o) => getDistanceKm(userLocation.latitude, userLocation.longitude, o.latitude, o.longitude) <= 10,
+          )
+        : newOffers;
+
+      if (nearby.length > 0) {
+        const newest = nearby.sort((a, b) => b.createdAt - a.createdAt)[0];
+        toast(
+          `🆕 ${newest.title} — ${newest.discountPercent}% OFF at ${newest.storeName}`,
+          "info",
+          6000,
+          onOfferClick ? () => onOfferClick(newest) : undefined,
+        );
+      }
     }
 
     prevIdsRef.current = new Set(offers.map((o) => o._id));
-  }, [offers, onOfferClick]);
+  }, [offers, onOfferClick, userLocation]);
 }
