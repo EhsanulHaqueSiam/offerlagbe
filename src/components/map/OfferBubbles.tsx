@@ -47,7 +47,7 @@ export function OfferBubbles({ offers }: OfferBubblesProps) {
         30,
         "rgba(236, 72, 153, 0.85)",
       ],
-      "circle-radius": ["step", ["get", "point_count"], 24, 10, 32, 30, 42],
+      "circle-radius": ["step", ["get", "point_count"], 32, 10, 38, 30, 46],
       "circle-stroke-width": 2.5,
       "circle-stroke-color": "rgba(255, 255, 255, 0.25)",
     },
@@ -61,7 +61,7 @@ export function OfferBubbles({ offers }: OfferBubblesProps) {
     filter: ["has", "point_count"],
     paint: {
       "circle-color": "transparent",
-      "circle-radius": ["step", ["get", "point_count"], 28, 10, 36, 30, 46],
+      "circle-radius": ["step", ["get", "point_count"], 36, 10, 42, 30, 50],
       "circle-stroke-width": 1.5,
       "circle-stroke-color": [
         "step",
@@ -84,8 +84,8 @@ export function OfferBubbles({ offers }: OfferBubblesProps) {
     layout: {
       "text-field": "{point_count_abbreviated}",
       "text-font": ["Noto Sans Bold"],
-      "text-size": ["step", ["get", "point_count"], 13, 10, 15, 30, 17],
-      "text-offset": [0, -0.15],
+      "text-size": ["step", ["get", "point_count"], 15, 10, 17, 30, 20],
+      "text-offset": [0, -0.4],
       "text-allow-overlap": true,
     },
     paint: {
@@ -102,8 +102,8 @@ export function OfferBubbles({ offers }: OfferBubblesProps) {
     layout: {
       "text-field": "offers",
       "text-font": ["Noto Sans Regular"],
-      "text-size": 9,
-      "text-offset": [0, 0.8],
+      "text-size": 8,
+      "text-offset": [0, 0.55],
       "text-allow-overlap": true,
     },
     paint: {
@@ -119,13 +119,13 @@ export function OfferBubbles({ offers }: OfferBubblesProps) {
     filter: ["has", "point_count"],
     layout: {
       "text-field": ["concat", "up to ", ["to-string", ["get", "maxDiscount"]], "%"],
-      "text-font": ["Noto Sans Regular"],
-      "text-size": 9,
-      "text-offset": [0, 1.8],
+      "text-font": ["Noto Sans Bold"],
+      "text-size": 8,
+      "text-offset": [0, 1.55],
       "text-allow-overlap": true,
     },
     paint: {
-      "text-color": "rgba(253, 224, 71, 0.9)",
+      "text-color": "rgba(253, 224, 71, 0.95)",
     },
   };
 
