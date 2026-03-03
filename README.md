@@ -13,28 +13,28 @@ OfferLagbe is a real-time, map-based offer discovery platform built for Banglade
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="screenshots/03-map-home-desktop.png" alt="Desktop Map View" />
+      <img src="screenshots/03-map-home-desktop.png" alt="Desktop — Map + Sidebar with offers" />
       <br /><strong>Desktop — Map + Sidebar</strong>
     </td>
     <td align="center" width="50%">
-      <img src="screenshots/04-submit-form.png" alt="Submit Offer Form" />
-      <br /><strong>Desktop — Submit Offer</strong>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <img src="screenshots/01-map-home-mobile.png" alt="Mobile Map Home" width="250" />
-      <br /><strong>Mobile — Map + Onboarding</strong>
-    </td>
-    <td align="center" width="33%">
-      <img src="screenshots/02-sidebar-mobile.png" alt="Mobile Sidebar" width="250" />
-      <br /><strong>Mobile — Bottom Sheet</strong>
+      <img src="screenshots/05-leaderboard.png" alt="Desktop — Top Stores Leaderboard" />
+      <br /><strong>Desktop — Top Stores Leaderboard</strong>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <img src="screenshots/06-submit-mobile.png" alt="Mobile Submit" width="250" />
-      <br /><strong>Mobile — Submit Offer</strong>
+      <img src="screenshots/04-submit-form.png" alt="Desktop — Submit Offer Form" />
+      <br /><strong>Desktop — Submit Offer</strong>
+    </td>
+    <td align="center" width="50%">
+      <img src="screenshots/01-map-home-mobile.png" alt="Mobile Map with Onboarding" width="250" />
+      <br /><strong>Mobile — Map + Onboarding Tour</strong>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="screenshots/02-sidebar-mobile.png" alt="Mobile Sidebar with Deal of the Day" width="250" />
+      <br /><strong>Mobile — Deal of the Day, Trending, Best This Week</strong>
     </td>
     <td align="center" width="50%">
       <img src="screenshots/07-leaderboard-mobile.png" alt="Mobile Leaderboard" width="250" />
