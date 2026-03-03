@@ -678,7 +678,7 @@ export function SubmitOfferForm() {
                   <span className="text-slate-500">(max 5)</span>
                 </label>
                 <div className="flex gap-2 flex-wrap">
-                  {imageFiles.map((file, i) => (
+                  {imageFiles.map((_, i) => (
                     <div
                       key={i}
                       className="relative w-16 h-16 rounded-xl overflow-hidden ring-1 ring-slate-700/30 group"
