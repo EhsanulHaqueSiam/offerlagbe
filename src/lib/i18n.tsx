@@ -66,6 +66,9 @@ const en = {
   "submit.tapMap": "Tap the map to set location",
   "submit.tapMapHint": 'Tap the map to pin the offer location, or press "Use Current Location"',
   "submit.adjustPin": "Tap the map to adjust the pin",
+  "submit.tapToExpand": "Tap to expand map",
+  "submit.confirmLocation": "Confirm Location",
+  "submit.closeMap": "Close Map",
   "submit.dateHint": "Start defaults to today. Leave end date empty if no expiry.",
 
   // Submit form placeholders
@@ -334,6 +337,9 @@ const bn: Record<keyof typeof en, string> = {
   "submit.tapMap": "ম্যাপে ট্যাপ করে লোকেশন সেট করুন",
   "submit.tapMapHint": 'ম্যাপে ট্যাপ করুন অথবা "বর্তমান লোকেশন" বাটন চাপুন',
   "submit.adjustPin": "পিন সরাতে ম্যাপে ট্যাপ করুন",
+  "submit.tapToExpand": "ম্যাপ বড় করতে ট্যাপ করুন",
+  "submit.confirmLocation": "লোকেশন নিশ্চিত করুন",
+  "submit.closeMap": "ম্যাপ বন্ধ করুন",
   "submit.dateHint": "শুরুর তারিখ আজ। শেষ তারিখ না থাকলে খালি রাখুন।",
 
   "submit.storeNamePlaceholder": "যেমন, স্টার কাবাব, দারাজ",

@@ -153,6 +153,7 @@ export function SubmitOfferForm() {
   }, []);
 
   const [parsingGoogleUrl, setParsingGoogleUrl] = useState(false);
+  const [mapExpanded, setMapExpanded] = useState(false);
 
   const handleGoogleMapsUrl = useCallback(
     async (url: string) => {
@@ -526,25 +527,88 @@ export function SubmitOfferForm() {
                 <span className="text-xs text-slate-500">{t("submit.detectingLocation")}</span>
               </div>
             </div>
+          ) : mapExpanded ? (
+            /* Expanded fullscreen map overlay */
+            <div className="fixed inset-0 z-[60] flex flex-col bg-slate-950 animate-fade-in">
+              <div className="flex-1 relative">
+                <OfferMap
+                  offers={[]}
+                  pickMode={true}
+                  onMapClick={handleMapClick}
+                  pickedLocation={
+                    form.latitude !== null && form.longitude !== null
+                      ? { lat: form.latitude, lng: form.longitude }
+                      : null
+                  }
+                />
+                {/* Coordinates badge */}
+                {form.latitude !== null && form.longitude !== null && (
+                  <div className="absolute top-4 left-4 glass rounded-xl px-3 py-2 text-xs text-slate-200 font-mono shadow-xl">
+                    📍 {form.latitude.toFixed(5)}, {form.longitude.toFixed(5)}
+                  </div>
+                )}
+                {/* Hint overlay */}
+                {form.latitude === null && (
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 glass rounded-xl px-4 py-2 text-xs text-white font-medium shadow-xl">
+                    {t("submit.tapMapHint")}
+                  </div>
+                )}
+              </div>
+              {/* Bottom bar with Done button */}
+              <div className="glass-strong border-t border-slate-700/30 px-4 py-3 safe-area-bottom">
+                <button
+                  type="button"
+                  onClick={() => setMapExpanded(false)}
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl py-3 transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  {form.latitude !== null ? t("submit.confirmLocation") : t("submit.closeMap")}
+                </button>
+              </div>
+            </div>
           ) : (
-            <div className="relative h-[140px] rounded-2xl overflow-hidden border border-slate-700/30 touch-action-pan-y">
-              <OfferMap
-                offers={[]}
-                pickMode={true}
-                onMapClick={handleMapClick}
-                pickedLocation={
-                  form.latitude !== null && form.longitude !== null ? { lat: form.latitude, lng: form.longitude } : null
-                }
-              />
+            /* Compact map preview — tap to expand */
+            <button
+              type="button"
+              onClick={() => setMapExpanded(true)}
+              className="relative w-full h-[140px] rounded-2xl overflow-hidden border border-slate-700/30 group cursor-pointer text-left"
+            >
+              <div className="pointer-events-none absolute inset-0">
+                <OfferMap
+                  offers={[]}
+                  pickMode={false}
+                  pickedLocation={
+                    form.latitude !== null && form.longitude !== null
+                      ? { lat: form.latitude, lng: form.longitude }
+                      : null
+                  }
+                />
+              </div>
+              {/* Expand overlay hint */}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                <div className="glass rounded-xl px-3 py-2 text-xs font-medium text-white shadow-lg flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+                    />
+                  </svg>
+                  {t("submit.tapToExpand")}
+                </div>
+              </div>
+              {/* Coordinate badge */}
               {form.latitude !== null && form.longitude !== null && (
                 <div className="absolute bottom-2 left-2 glass rounded-lg px-2 py-1 text-[10px] text-slate-300 font-mono">
                   {form.latitude.toFixed(4)}, {form.longitude.toFixed(4)}
                 </div>
               )}
-            </div>
+            </button>
           )}
 
-          {form.latitude === null && !locationLoading && (
+          {!mapExpanded && form.latitude === null && !locationLoading && (
             <p className="text-xs text-amber-400/80 mt-1.5 flex items-center gap-1">
               <svg
                 className="w-3.5 h-3.5 flex-shrink-0"
@@ -562,7 +626,7 @@ export function SubmitOfferForm() {
               {t("submit.tapMapHint")}
             </p>
           )}
-          {form.latitude !== null && !locationLoading && (
+          {!mapExpanded && form.latitude !== null && !locationLoading && (
             <p className="text-xs text-slate-500 mt-1">{t("submit.adjustPin")}</p>
           )}
           <ErrorMsg msg={errors.location} />
