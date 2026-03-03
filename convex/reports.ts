@@ -1,11 +1,8 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { validateVisitorId, isValidVisitorId } from "./validators";
 
 const AUTO_FLAG_THRESHOLD = 5;
-
-function validateVisitorId(id: string) {
-  if (!/^[a-f0-9]{32}$/.test(id)) throw new Error("Invalid visitor ID");
-}
 
 export const getVisitorReport = query({
   args: {
@@ -13,7 +10,7 @@ export const getVisitorReport = query({
     visitorId: v.string(),
   },
   handler: async (ctx, args) => {
-    if (!/^[a-f0-9]{32}$/.test(args.visitorId)) return false;
+    if (!isValidVisitorId(args.visitorId)) return false;
     const existing = await ctx.db
       .query("reports")
       .withIndex("by_visitor_offer", (q) =>

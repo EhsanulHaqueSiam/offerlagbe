@@ -1,15 +1,32 @@
 import { Link } from "@tanstack/react-router";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { CATEGORY_MAP } from "@/lib/categories";
 import { useTranslation } from "@/lib/i18n";
 import type { Offer } from "@/types/offer";
+import type { Id } from "../../../convex/_generated/dataModel";
 import type { CategoryId } from "@/lib/categories";
 
 interface NearbyOffersSectionProps {
-  offers: Offer[];
+  offerId: Id<"offers">;
 }
 
-export function NearbyOffersSection({ offers }: NearbyOffersSectionProps) {
+export function NearbyOffersSection({ offerId }: NearbyOffersSectionProps) {
   const { t } = useTranslation();
+  const offers = useQuery(api.offers.getNearby, { offerId }) as Offer[] | undefined;
+
+  if (offers === undefined) {
+    return (
+      <div className="glass rounded-2xl p-4">
+        <div className="w-32 h-4 skeleton mb-3" />
+        <div className="space-y-2">
+          {[1, 2].map((i) => (
+            <div key={i} className="skeleton h-14 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (offers.length === 0) {
     return (

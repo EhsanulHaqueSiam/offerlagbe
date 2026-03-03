@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { validateVisitorId, isValidVisitorId } from "./validators";
 
 // Helper to resolve image URLs and strip sensitive fields
 async function resolveOffer(ctx: any, offer: any) {
@@ -17,32 +18,45 @@ async function resolveOffer(ctx: any, offer: any) {
   };
 }
 
-// Single combined query for home page — replaces list + trending + bestThisWeek
-// This means only 1 subscription per client instead of 3
+/** Haversine distance in kilometers between two lat/lng points. */
+function haversineKm(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function isActiveOffer(o: { status: string; endDate?: string }, now: number): boolean {
+  if (o.status !== "active" && o.status !== "flagged") return false;
+  if (o.endDate && new Date(o.endDate).getTime() < now) return false;
+  return true;
+}
+
 export const list = query({
   args: {
     category: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    let offers;
-    if (args.category) {
-      offers = await ctx.db
-        .query("offers")
-        .withIndex("by_category", (q) => q.eq("category", args.category!))
-        .collect();
-    } else {
-      offers = await ctx.db.query("offers").collect();
-    }
+    const offers = args.category
+      ? await ctx.db
+          .query("offers")
+          .withIndex("by_category", (q) => q.eq("category", args.category!))
+          .collect()
+      : await ctx.db.query("offers").collect();
 
     const now = Date.now();
-    const filtered = offers.filter((o) => {
-      if (o.status !== "active" && o.status !== "flagged") return false;
-      if (o.endDate && new Date(o.endDate).getTime() < now) return false;
-      return true;
-    });
-
-    const resolved = await Promise.all(filtered.map((o) => resolveOffer(ctx, o)));
-    return resolved;
+    const filtered = offers.filter((o) => isActiveOffer(o, now));
+    return Promise.all(filtered.map((o) => resolveOffer(ctx, o)));
   },
 });
 
@@ -77,10 +91,6 @@ const ALLOWED_TAGS = ["verified", "limited-stock", "online-only", "in-store-only
 
 const VALID_CATEGORIES = ["food", "electronics", "fashion", "beauty", "home", "sports", "travel", "education", "healthcare", "entertainment", "groceries", "services"];
 
-function validateVisitorId(id: string) {
-  if (!/^[a-f0-9]{32}$/.test(id)) throw new Error("Invalid visitor ID");
-}
-
 export const create = mutation({
   args: {
     title: v.string(),
@@ -102,7 +112,6 @@ export const create = mutation({
     tags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
-    // Server-side input validation
     const title = args.title.trim();
     if (!title || title.length > 150) throw new Error("Title must be 1-150 characters");
     if (args.description && args.description.length > 1000) throw new Error("Description too long");
@@ -119,17 +128,21 @@ export const create = mutation({
     if (args.couponCode && args.couponCode.length > 50) throw new Error("Coupon code too long");
     if (args.imageStorageIds.length > 5) throw new Error("Maximum 5 images");
 
-    // Validate submitterId format if provided
     if (args.submitterId) validateVisitorId(args.submitterId);
+
+    // Validate dates if provided
+    if (args.startDate && isNaN(Date.parse(args.startDate))) throw new Error("Invalid start date");
+    if (args.endDate && isNaN(Date.parse(args.endDate))) throw new Error("Invalid end date");
 
     // Rate limit: max 3 offers per submitter per hour
     if (args.submitterId) {
       const oneHourAgo = Date.now() - 60 * 60 * 1000;
-      const allOffers = await ctx.db.query("offers").collect();
-      const recentBySubmitter = allOffers.filter(
-        (o) => o.submitterId === args.submitterId && o.createdAt > oneHourAgo,
-      );
-      if (recentBySubmitter.length >= 3) {
+      const bySubmitter = await ctx.db
+        .query("offers")
+        .withIndex("by_submitter", (q) => q.eq("submitterId", args.submitterId!))
+        .collect();
+      const recentCount = bySubmitter.filter((o) => o.createdAt > oneHourAgo).length;
+      if (recentCount >= 3) {
         throw new Error("Too many offers. Please wait before posting again.");
       }
     }
@@ -168,8 +181,7 @@ export const incrementView = mutation({
     visitorId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Basic validation — reject obviously invalid visitor IDs
-    if (args.visitorId && !/^[a-f0-9]{32}$/.test(args.visitorId)) return;
+    if (args.visitorId && !isValidVisitorId(args.visitorId)) return;
     const offer = await ctx.db.get(args.id);
     if (!offer) return;
     await ctx.db.patch(args.id, { views: (offer.views ?? 0) + 1 });
@@ -192,19 +204,9 @@ export const checkDuplicate = query({
       )
       .take(10);
 
-    // Haversine distance filter — within ~200m
-    const nearby = results.filter((o) => {
-      const R = 6371000; // meters
-      const dLat = ((o.latitude - args.latitude) * Math.PI) / 180;
-      const dLon = ((o.longitude - args.longitude) * Math.PI) / 180;
-      const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos((args.latitude * Math.PI) / 180) *
-          Math.cos((o.latitude * Math.PI) / 180) *
-          Math.sin(dLon / 2) ** 2;
-      const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return dist <= 200;
-    });
+    const nearby = results.filter(
+      (o) => haversineKm(args.latitude, args.longitude, o.latitude, o.longitude) <= 0.2,
+    );
 
     return nearby.map((o) => ({
       _id: o._id,
@@ -222,10 +224,6 @@ export const generateUploadUrl = mutation({
   },
   handler: async (ctx, args) => {
     validateVisitorId(args.visitorId);
-
-    // Rate limit: max 10 upload URLs per visitor per hour
-    // (reuses offers rate-check pattern: if they can't create more than 3 offers/hr,
-    // 10 upload URLs is generous since each offer can have max 5 images)
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -234,12 +232,11 @@ export const listByStore = query({
   args: { storeName: v.string() },
   handler: async (ctx, args) => {
     const offers = await ctx.db.query("offers").collect();
+    const now = Date.now();
 
     const storeOffers = offers.filter(
       (o) =>
-        o.storeName === args.storeName &&
-        (o.status === "active" || o.status === "flagged") &&
-        (!o.endDate || new Date(o.endDate).getTime() >= Date.now()),
+        o.storeName === args.storeName && isActiveOffer(o, now),
     );
 
     storeOffers.sort((a, b) => b.createdAt - a.createdAt);
@@ -261,18 +258,7 @@ export const getNearby = query({
       if (o._id === args.offerId) return false;
       if (o.status !== "active") return false;
       if (o.endDate && new Date(o.endDate).getTime() < now) return false;
-
-      // Haversine distance <= 0.5km
-      const R = 6371;
-      const dLat = ((o.latitude - target.latitude) * Math.PI) / 180;
-      const dLon = ((o.longitude - target.longitude) * Math.PI) / 180;
-      const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos((target.latitude * Math.PI) / 180) *
-          Math.cos((o.latitude * Math.PI) / 180) *
-          Math.sin(dLon / 2) ** 2;
-      const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return dist <= 0.5;
+      return haversineKm(target.latitude, target.longitude, o.latitude, o.longitude) <= 0.5;
     });
 
     nearby.sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes));

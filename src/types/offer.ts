@@ -1,5 +1,10 @@
 import type { Id } from "../../convex/_generated/dataModel";
 
+/**
+ * Client-side offer type. Note: `resolveOffer` on the server strips
+ * `submitterId`, `imageStorageIds`, and `logoStorageId` before sending
+ * to the client, replacing them with resolved `logoUrl` and `imageUrls`.
+ */
 export interface Offer {
   _id: Id<"offers">;
   _creationTime: number;
@@ -13,8 +18,6 @@ export interface Offer {
   longitude: number;
   address: string;
   storeName: string;
-  logoStorageId?: Id<"_storage">;
-  imageStorageIds: Id<"_storage">[];
   logoUrl: string | null;
   imageUrls: string[];
   upvotes: number;
@@ -24,7 +27,6 @@ export interface Offer {
   endDate?: string;
   views?: number;
   couponCode?: string;
-  submitterId?: string;
   tags?: string[];
   createdAt: number;
 }

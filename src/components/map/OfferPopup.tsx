@@ -10,18 +10,12 @@ import { ImageLightbox } from "../ui/ImageLightbox";
 import { shareOffer, getWhatsAppShareUrl } from "@/lib/share";
 import { isBookmarked as checkBookmarked, toggleBookmark } from "@/lib/bookmarks";
 import { getDirectionsUrl } from "@/lib/directions";
+import { isExpiringSoon, isEndingToday, formatOfferDate } from "@/lib/expiry";
 import { toast } from "@/lib/toast";
 import { useTranslation } from "@/lib/i18n";
 import { CouponBadge } from "../offers/CouponBadge";
 import type { Offer } from "@/types/offer";
 import type { CategoryId } from "@/lib/categories";
-
-function isExpiringSoon(endDate?: string): boolean {
-  if (!endDate) return false;
-  const end = new Date(endDate).getTime();
-  const now = Date.now();
-  return end > now && end - now <= 48 * 60 * 60 * 1000;
-}
 
 interface OfferPopupProps {
   offer: Offer;
@@ -59,18 +53,6 @@ export function OfferPopup({ offer, onClose, onBookmarkChange }: OfferPopupProps
     storeName: offer.storeName,
     discountPercent: offer.discountPercent,
     offerId: offer._id,
-  };
-
-  const formatDate = (dateStr: string) => {
-    try {
-      return new Date(dateStr).toLocaleDateString("en-BD", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      });
-    } catch {
-      return dateStr;
-    }
   };
 
   return (
@@ -131,10 +113,7 @@ export function OfferPopup({ offer, onClose, onBookmarkChange }: OfferPopupProps
                 {isExpiringSoon(offer.endDate) && (
                   <span className="flex items-center gap-0.5 text-[9px] bg-orange-500/10 text-orange-400 px-1.5 py-0.5 rounded-full font-medium">
                     <span className="w-1 h-1 rounded-full bg-orange-400 animate-pulse" />
-                    {(() => {
-                      const hoursLeft = (new Date(offer.endDate!).getTime() - Date.now()) / (60 * 60 * 1000);
-                      return hoursLeft <= 24 ? t("offer.endsToday") : t("offer.expiringSoon");
-                    })()}
+                    {isEndingToday(offer.endDate!) ? t("offer.endsToday") : t("offer.expiringSoon")}
                   </span>
                 )}
               </div>
@@ -249,9 +228,9 @@ export function OfferPopup({ offer, onClose, onBookmarkChange }: OfferPopupProps
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span>
-                {offer.startDate && formatDate(offer.startDate)}
+                {offer.startDate && formatOfferDate(offer.startDate)}
                 {offer.startDate && offer.endDate && " — "}
-                {offer.endDate && formatDate(offer.endDate)}
+                {offer.endDate && formatOfferDate(offer.endDate)}
               </span>
             </div>
           )}

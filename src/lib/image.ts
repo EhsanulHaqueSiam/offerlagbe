@@ -83,12 +83,17 @@ export async function compressImage(file: File): Promise<File> {
     blob = await canvasToBlob(canvas, "image/jpeg", quality);
   }
 
-  // If still too large, reduce dimensions
+  // If still too large, reduce dimensions (re-draw from canvas, not revoked img)
   if (blob.size > MAX_SIZE_BYTES) {
     const scale = Math.sqrt(MAX_SIZE_BYTES / blob.size);
+    const srcData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     canvas.width = Math.round(width * scale);
     canvas.height = Math.round(height * scale);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const tmpCanvas = document.createElement("canvas");
+    tmpCanvas.width = srcData.width;
+    tmpCanvas.height = srcData.height;
+    tmpCanvas.getContext("2d")!.putImageData(srcData, 0, 0);
+    ctx.drawImage(tmpCanvas, 0, 0, canvas.width, canvas.height);
     blob = await canvasToBlob(canvas, "image/jpeg", 0.7);
   }
 

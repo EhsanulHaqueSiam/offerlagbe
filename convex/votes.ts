@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { validateVisitorId, isValidVisitorId } from "./validators";
 
 // Only flag when truly overwhelmingly negative:
 // Need at least 15 total votes AND less than 20% are positive
@@ -21,7 +22,7 @@ export const getVisitorVote = query({
     visitorId: v.string(),
   },
   handler: async (ctx, args) => {
-    if (!/^[a-f0-9]{32}$/.test(args.visitorId)) return null;
+    if (!isValidVisitorId(args.visitorId)) return null;
     const vote = await ctx.db
       .query("votes")
       .withIndex("by_visitor_offer", (q) =>
@@ -31,10 +32,6 @@ export const getVisitorVote = query({
     return vote?.voteType ?? null;
   },
 });
-
-function validateVisitorId(id: string) {
-  if (!/^[a-f0-9]{32}$/.test(id)) throw new Error("Invalid visitor ID");
-}
 
 export const vote = mutation({
   args: {

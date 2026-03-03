@@ -69,6 +69,7 @@ export function SubmitOfferForm() {
   const [form, setForm] = useState<FormData>(initialForm);
   const [errors, setErrors] = useState<FormErrors>({});
   const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [moreDetails, setMoreDetails] = useState(false);
@@ -119,7 +120,7 @@ export function SubmitOfferForm() {
     } else {
       toast(t("toast.locationDenied"), "info");
     }
-  }, []);
+  }, [t]);
 
   const updateForm = (updates: Partial<FormData>) => {
     setForm((prev) => ({ ...prev, ...updates }));
@@ -149,6 +150,7 @@ export function SubmitOfferForm() {
       try {
         const compressed = await compressImage(file);
         setImageFiles((prev) => [...prev, compressed]);
+        setImagePreviews((prev) => [...prev, URL.createObjectURL(compressed)]);
       } catch {
         toast(`Could not process ${file.name}`, "error");
       }
@@ -682,17 +684,21 @@ export function SubmitOfferForm() {
                       className="relative w-16 h-16 rounded-xl overflow-hidden ring-1 ring-slate-700/30 group"
                     >
                       <img
-                        src={URL.createObjectURL(file)}
+                        src={imagePreviews[i]}
                         alt={`Upload ${i + 1}`}
                         className="w-full h-full object-cover"
                       />
                       <button
                         type="button"
-                        onClick={() =>
+                        onClick={() => {
+                          URL.revokeObjectURL(imagePreviews[i]);
                           setImageFiles((prev) =>
                             prev.filter((_, idx) => idx !== i),
-                          )
-                        }
+                          );
+                          setImagePreviews((prev) =>
+                            prev.filter((_, idx) => idx !== i),
+                          );
+                        }}
                         className="absolute top-0.5 right-0.5 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center text-white hover:bg-red-500 transition-colors opacity-0 group-hover:opacity-100"
                         aria-label={`Remove image ${i + 1}`}
                       >

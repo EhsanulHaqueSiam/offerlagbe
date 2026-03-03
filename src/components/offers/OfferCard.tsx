@@ -4,6 +4,7 @@ import { CATEGORY_MAP } from "@/lib/categories";
 import { TrustBadge } from "../voting/TrustBadge";
 import { CountdownTimer } from "./CountdownTimer";
 import { getDistanceKm, formatDistance, type UserLocation } from "@/lib/location";
+import { isExpiringSoon } from "@/lib/expiry";
 import { useTranslation } from "@/lib/i18n";
 import type { Offer } from "@/types/offer";
 import type { CategoryId } from "@/lib/categories";
@@ -14,13 +15,6 @@ interface OfferCardProps {
   onClick?: () => void;
   isBookmarked?: boolean;
   onToggleBookmark?: (id: string) => void;
-}
-
-function isExpiringSoon(endDate?: string): boolean {
-  if (!endDate) return false;
-  const end = new Date(endDate).getTime();
-  const now = Date.now();
-  return end > now && end - now <= 48 * 60 * 60 * 1000;
 }
 
 export const OfferCard = memo(function OfferCard({

@@ -1,9 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
-
-function validateVisitorId(id: string) {
-  if (!/^[a-f0-9]{32}$/.test(id)) throw new Error("Invalid visitor ID");
-}
+import { validateVisitorId } from "./validators";
 
 // Truncate visitorId in responses to prevent identity theft
 function safeVisitorId(id: string): string {

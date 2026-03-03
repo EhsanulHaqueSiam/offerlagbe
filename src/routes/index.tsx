@@ -20,8 +20,7 @@ import { useOfflineOffers } from "@/hooks/useOfflineOffers";
 import { toast } from "@/lib/toast";
 import { useTranslation } from "@/lib/i18n";
 import { useNewOfferNotification } from "@/hooks/useNewOfferNotification";
-import type { Offer } from "@/types/offer";
-import type { SortOption } from "@/types/offer";
+import type { Offer, SortOption } from "@/types/offer";
 import type { CategoryId } from "@/lib/categories";
 
 export const Route = createFileRoute("/")({
@@ -32,7 +31,6 @@ function HomePage() {
   const { t } = useTranslation();
   const allOffers = useQuery(api.offers.list, {}) as Offer[] | undefined;
   const [activeCategories, setActiveCategories] = useState<Set<CategoryId>>(new Set());
-  const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [showLocationSettings, setShowLocationSettings] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(getUserLocation);
@@ -74,12 +72,6 @@ function HomePage() {
       .sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes))
       .slice(0, 10);
   }, [allOffers]);
-
-  // Search debounce (300ms)
-  useEffect(() => {
-    const id = setTimeout(() => setSearchTerm(searchInput), 300);
-    return () => clearTimeout(id);
-  }, [searchInput]);
 
   // Live notification when new offers are added
   useNewOfferNotification(allOffers, setSelectedOffer);
@@ -221,7 +213,7 @@ function HomePage() {
       return;
     }
     setNearMeActive((v) => !v);
-  }, [userLocation]);
+  }, [userLocation, t]);
 
   const handleToggleSaved = useCallback(() => {
     setShowSavedOnly((v) => !v);
@@ -268,8 +260,8 @@ function HomePage() {
         offers={filteredOffers}
         activeCategories={activeCategories}
         onToggleCategory={handleToggleCategory}
-        searchTerm={searchInput}
-        onSearchChange={setSearchInput}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
         userLocation={userLocation}
         onOfferClick={handleOfferClick}
         sortBy={sortBy}

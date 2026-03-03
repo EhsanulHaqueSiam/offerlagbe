@@ -11,6 +11,7 @@ import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { shareOffer, getWhatsAppShareUrl } from "@/lib/share";
 import { toggleBookmark, isBookmarked } from "@/lib/bookmarks";
 import { getDirectionsUrl } from "@/lib/directions";
+import { formatOfferDate } from "@/lib/expiry";
 import { toast } from "@/lib/toast";
 import { useTranslation } from "@/lib/i18n";
 import { CouponBadge } from "@/components/offers/CouponBadge";
@@ -26,13 +27,6 @@ import MapGL, { Marker } from "react-map-gl/maplibre";
 export const Route = createFileRoute("/offer/$id")({
   component: OfferDetailPage,
 });
-
-function isExpiringSoon(endDate?: string): boolean {
-  if (!endDate) return false;
-  const end = new Date(endDate).getTime();
-  const now = Date.now();
-  return end > now && end - now <= 48 * 60 * 60 * 1000;
-}
 
 function OfferDetailPage() {
   const { t } = useTranslation();
@@ -139,14 +133,6 @@ function OfferDetailPage() {
   }
 
   const category = CATEGORY_MAP[offer.category as CategoryId];
-
-  const formatDate = (dateStr: string) => {
-    try {
-      return new Date(dateStr).toLocaleDateString("en-BD", { day: "numeric", month: "short", year: "numeric" });
-    } catch {
-      return dateStr;
-    }
-  };
 
   const shareData = {
     title: offer.title,
@@ -321,9 +307,9 @@ function OfferDetailPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span>
-                {offer.startDate && formatDate(offer.startDate)}
+                {offer.startDate && formatOfferDate(offer.startDate)}
                 {offer.startDate && offer.endDate && " — "}
-                {offer.endDate && formatDate(offer.endDate)}
+                {offer.endDate && formatOfferDate(offer.endDate)}
               </span>
             </div>
           )}

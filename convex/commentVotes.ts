@@ -1,9 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
-
-function validateVisitorId(id: string) {
-  if (!/^[a-f0-9]{32}$/.test(id)) throw new Error("Invalid visitor ID");
-}
+import { validateVisitorId, isValidVisitorId } from "./validators";
 
 export const getVisitorCommentVote = query({
   args: {
@@ -11,7 +8,7 @@ export const getVisitorCommentVote = query({
     visitorId: v.string(),
   },
   handler: async (ctx, args) => {
-    if (!/^[a-f0-9]{32}$/.test(args.visitorId)) return false;
+    if (!isValidVisitorId(args.visitorId)) return false;
     const existing = await ctx.db
       .query("commentVotes")
       .withIndex("by_visitor_comment", (q) =>

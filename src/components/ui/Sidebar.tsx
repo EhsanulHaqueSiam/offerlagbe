@@ -3,8 +3,7 @@ import { CategoryFilter } from "../offers/CategoryFilter";
 import { SearchBar } from "../offers/SearchBar";
 import { OfferCard } from "../offers/OfferCard";
 import { useTranslation } from "@/lib/i18n";
-import type { Offer } from "@/types/offer";
-import type { SortOption } from "@/types/offer";
+import type { Offer, SortOption } from "@/types/offer";
 import type { CategoryId } from "@/lib/categories";
 import type { UserLocation } from "@/lib/location";
 

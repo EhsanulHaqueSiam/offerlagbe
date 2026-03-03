@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Link } from "@tanstack/react-router";
-import { getUserLocation, type UserLocation } from "@/lib/location";
+import type { UserLocation } from "@/lib/location";
 import { useTranslation } from "@/lib/i18n";
 
 interface HeaderProps {
@@ -9,7 +9,7 @@ interface HeaderProps {
 }
 
 export const Header = memo(function Header({ onOpenLocationSettings, userLocation }: HeaderProps) {
-  const savedLoc = userLocation ?? getUserLocation();
+  const savedLoc = userLocation;
   const { lang, setLang, t } = useTranslation();
 
   return (

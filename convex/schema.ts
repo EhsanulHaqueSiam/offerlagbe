@@ -34,6 +34,7 @@ export default defineSchema({
     .index("by_category", ["category"])
     .index("by_status", ["status"])
     .index("by_created", ["createdAt"])
+    .index("by_submitter", ["submitterId"])
     .searchIndex("search_title", {
       searchField: "title",
       filterFields: ["category", "status"],
