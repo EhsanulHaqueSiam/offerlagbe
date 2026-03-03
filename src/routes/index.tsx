@@ -1,27 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { api } from "../../convex/_generated/api";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { OfferMap } from "@/components/map/OfferMap";
 import { Header } from "@/components/ui/Header";
-import { Sidebar } from "@/components/ui/Sidebar";
-import type { PriceRange, DateFilter } from "@/components/ui/Sidebar";
 import { LocationSettings } from "@/components/ui/LocationSettings";
+import type { DateFilter, PriceRange } from "@/components/ui/Sidebar";
+import { Sidebar } from "@/components/ui/Sidebar";
+import { useNewOfferNotification } from "@/hooks/useNewOfferNotification";
+import { useOfflineOffers } from "@/hooks/useOfflineOffers";
+import { getBookmarks, toggleBookmark } from "@/lib/bookmarks";
+import type { CategoryId } from "@/lib/categories";
+import { useTranslation } from "@/lib/i18n";
 import {
+  getDistanceKm,
+  getLocationWithFallback,
   getUserLocation,
   setUserLocation as saveUserLocation,
-  getLocationWithFallback,
-  getDistanceKm,
   type UserLocation,
 } from "@/lib/location";
-import { getBookmarks, toggleBookmark } from "@/lib/bookmarks";
 import { cacheOffers } from "@/lib/offlineStore";
-import { useOfflineOffers } from "@/hooks/useOfflineOffers";
 import { toast } from "@/lib/toast";
-import { useTranslation } from "@/lib/i18n";
-import { useNewOfferNotification } from "@/hooks/useNewOfferNotification";
 import type { Offer, SortOption } from "@/types/offer";
-import type { CategoryId } from "@/lib/categories";
+import { api } from "../../convex/_generated/api";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -57,19 +57,21 @@ function HomePage() {
   // Compute trending + bestThisWeek client-side (saves 2 Convex subscriptions)
   const trendingOffers = useMemo(() => {
     if (!allOffers) return [];
-    const cutoff = Date.now() - 48 * 60 * 60 * 1000;
+    const now = Date.now(); // eslint-disable-line react-hooks/purity
+    const cutoff = now - 48 * 60 * 60 * 1000;
     return allOffers
-      .filter((o) => o.createdAt >= cutoff && (!o.endDate || new Date(o.endDate).getTime() >= Date.now()))
-      .sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes))
+      .filter((o) => o.createdAt >= cutoff && (!o.endDate || new Date(o.endDate).getTime() >= now))
+      .sort((a, b) => b.upvotes - b.downvotes - (a.upvotes - a.downvotes))
       .slice(0, 5);
   }, [allOffers]);
 
   const bestThisWeek = useMemo(() => {
     if (!allOffers) return [];
-    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const now = Date.now(); // eslint-disable-line react-hooks/purity
+    const cutoff = now - 7 * 24 * 60 * 60 * 1000;
     return allOffers
-      .filter((o) => o.createdAt >= cutoff && (!o.endDate || new Date(o.endDate).getTime() >= Date.now()))
-      .sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes))
+      .filter((o) => o.createdAt >= cutoff && (!o.endDate || new Date(o.endDate).getTime() >= now))
+      .sort((a, b) => b.upvotes - b.downvotes - (a.upvotes - a.downvotes))
       .slice(0, 10);
   }, [allOffers]);
 
@@ -77,6 +79,7 @@ function HomePage() {
   useNewOfferNotification(allOffers, setSelectedOffer);
 
   // Ask for location on first visit if not already saved
+  // biome-ignore lint/correctness/useExhaustiveDependencies: run once on mount
   useEffect(() => {
     if (userLocation) return;
     let cancelled = false;
@@ -111,29 +114,23 @@ function HomePage() {
     setBookmarkVersion((v) => v + 1);
   }, []);
 
-  const effectiveOffers = isOffline ? cachedOffers : (allOffers ?? []);
+  const effectiveOffers = useMemo(
+    () => (isOffline ? cachedOffers : (allOffers ?? [])),
+    [isOffline, cachedOffers, allOffers],
+  );
 
   const filteredOffers = useMemo(() => {
-    let offers = searchTerm.trim().length >= 2
-      ? searchResults ?? []
-      : effectiveOffers;
+    let offers = searchTerm.trim().length >= 2 ? (searchResults ?? []) : effectiveOffers;
 
     // Category filter
     if (activeCategories.size > 0) {
-      offers = offers.filter((o) =>
-        activeCategories.has(o.category as CategoryId),
-      );
+      offers = offers.filter((o) => activeCategories.has(o.category as CategoryId));
     }
 
     // Near Me filter (5km radius)
     if (nearMeActive && userLocation) {
       offers = offers.filter((o) => {
-        const dist = getDistanceKm(
-          userLocation.latitude,
-          userLocation.longitude,
-          o.latitude,
-          o.longitude,
-        );
+        const dist = getDistanceKm(userLocation.latitude, userLocation.longitude, o.latitude, o.longitude);
         return dist <= 5;
       });
     }
@@ -157,7 +154,7 @@ function HomePage() {
 
     // Date range filter
     if (dateFilter !== "all") {
-      const now = Date.now();
+      const now = Date.now(); // eslint-disable-line react-hooks/purity
       const cutoffs = {
         today: now - 24 * 60 * 60 * 1000,
         week: now - 7 * 24 * 60 * 60 * 1000,
@@ -182,7 +179,7 @@ function HomePage() {
         sorted.sort((a, b) => b.discountPercent - a.discountPercent);
         break;
       case "trusted":
-        sorted.sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes));
+        sorted.sort((a, b) => b.upvotes - b.downvotes - (a.upvotes - a.downvotes));
         break;
       case "newest":
       default:
@@ -191,7 +188,19 @@ function HomePage() {
     }
 
     return sorted;
-  }, [effectiveOffers, searchResults, activeCategories, searchTerm, sortBy, nearMeActive, userLocation, showSavedOnly, bookmarkedIds, priceRange, dateFilter]);
+  }, [
+    effectiveOffers,
+    searchResults,
+    activeCategories,
+    searchTerm,
+    sortBy,
+    nearMeActive,
+    userLocation,
+    showSavedOnly,
+    bookmarkedIds,
+    priceRange,
+    dateFilter,
+  ]);
 
   const handleToggleCategory = useCallback((id: CategoryId) => {
     setActiveCategories((prev) => {
@@ -219,6 +228,12 @@ function HomePage() {
     setShowSavedOnly((v) => !v);
   }, []);
 
+  const handleGeolocate = useCallback((coords: { latitude: number; longitude: number }) => {
+    const newLoc: UserLocation = { ...coords, label: "Current Location" };
+    saveUserLocation(newLoc);
+    setUserLocation(newLoc);
+  }, []);
+
   // Loading state (skip if offline with cached data)
   if (allOffers === undefined && !isOffline) {
     return (
@@ -226,7 +241,11 @@ function HomePage() {
         <div className="flex flex-col items-center gap-3 animate-fade-in">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+              />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
@@ -251,11 +270,9 @@ function HomePage() {
         selectedOffer={selectedOffer}
         onSelectOffer={setSelectedOffer}
         onBookmarkChange={() => setBookmarkVersion((v) => v + 1)}
+        onGeolocate={handleGeolocate}
       />
-      <Header
-        onOpenLocationSettings={() => setShowLocationSettings(true)}
-        userLocation={userLocation}
-      />
+      <Header onOpenLocationSettings={() => setShowLocationSettings(true)} userLocation={userLocation} />
       <Sidebar
         offers={filteredOffers}
         activeCategories={activeCategories}
@@ -281,10 +298,7 @@ function HomePage() {
       />
 
       {showLocationSettings && (
-        <LocationSettings
-          onClose={() => setShowLocationSettings(false)}
-          onLocationChange={setUserLocation}
-        />
+        <LocationSettings onClose={() => setShowLocationSettings(false)} onLocationChange={setUserLocation} />
       )}
     </div>
   );

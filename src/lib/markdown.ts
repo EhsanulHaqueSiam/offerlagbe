@@ -55,24 +55,21 @@ function processInline(text: string): string {
   let result = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
 
   // Links: [text](url) — only allow http/https
-  result = result.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    (_match, linkText: string, url: string) => {
-      // URL was already HTML-escaped, decode to validate the actual URL
-      const decodedUrl = url
-        .replace(/&amp;/g, "&")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'");
-      if (isValidUrl(decodedUrl)) {
-        // Re-escape the decoded URL for safe attribute insertion
-        const safeHref = escapeHtml(decodedUrl);
-        return `<a href="${safeHref}" rel="noopener noreferrer" target="_blank">${linkText}</a>`;
-      }
-      return linkText;
-    },
-  );
+  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, linkText: string, url: string) => {
+    // URL was already HTML-escaped, decode to validate the actual URL
+    const decodedUrl = url
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+    if (isValidUrl(decodedUrl)) {
+      // Re-escape the decoded URL for safe attribute insertion
+      const safeHref = escapeHtml(decodedUrl);
+      return `<a href="${safeHref}" rel="noopener noreferrer" target="_blank">${linkText}</a>`;
+    }
+    return linkText;
+  });
 
   return result;
 }

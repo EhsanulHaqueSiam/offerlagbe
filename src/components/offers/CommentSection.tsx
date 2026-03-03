@@ -1,11 +1,11 @@
-import { useState, useMemo } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
-import { getVisitorId } from "@/lib/visitor";
-import { toast } from "@/lib/toast";
+import { useMutation, useQuery } from "convex/react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
+import { toast } from "@/lib/toast";
+import { getVisitorId } from "@/lib/visitor";
+import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 function visitorColor(id: string): string {
   let hash = 0;
@@ -239,7 +239,10 @@ export function CommentSection({ offerId }: CommentSectionProps) {
               {t("comments.post")}
             </button>
             <button
-              onClick={() => { setReplyingTo(null); setReplyText(""); }}
+              onClick={() => {
+                setReplyingTo(null);
+                setReplyText("");
+              }}
               className="px-2 py-1.5 text-[10px] text-slate-500 hover:text-slate-300"
             >
               {t("comments.cancel")}
@@ -284,7 +287,11 @@ export function CommentSection({ offerId }: CommentSectionProps) {
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-white flex items-center gap-2">
           <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            />
           </svg>
           {t("comments.title")}
           {comments && comments.length > 0 && (
@@ -362,9 +369,7 @@ export function CommentSection({ offerId }: CommentSectionProps) {
           {t("comments.empty")} {t("comments.beFirst")}
         </p>
       ) : (
-        <div className="space-y-3 max-h-96 overflow-y-auto">
-          {topLevel.map((comment) => renderComment(comment))}
-        </div>
+        <div className="space-y-3 max-h-96 overflow-y-auto">{topLevel.map((comment) => renderComment(comment))}</div>
       )}
     </div>
   );

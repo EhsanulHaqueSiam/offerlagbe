@@ -17,12 +17,7 @@ export default defineSchema({
     imageStorageIds: v.array(v.id("_storage")),
     upvotes: v.number(),
     downvotes: v.number(),
-    status: v.union(
-      v.literal("active"),
-      v.literal("flagged"),
-      v.literal("removed"),
-      v.literal("expired"),
-    ),
+    status: v.union(v.literal("active"), v.literal("flagged"), v.literal("removed"), v.literal("expired")),
     startDate: v.optional(v.string()),
     endDate: v.optional(v.string()),
     views: v.optional(v.number()),
@@ -63,12 +58,7 @@ export default defineSchema({
   reports: defineTable({
     offerId: v.id("offers"),
     visitorId: v.string(),
-    reason: v.union(
-      v.literal("spam"),
-      v.literal("fake"),
-      v.literal("expired"),
-      v.literal("inappropriate"),
-    ),
+    reason: v.union(v.literal("spam"), v.literal("fake"), v.literal("expired"), v.literal("inappropriate")),
     createdAt: v.number(),
   })
     .index("by_offer", ["offerId"])

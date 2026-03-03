@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
-import { validateVisitorId, isValidVisitorId } from "./validators";
+import { mutation, query } from "./_generated/server";
+import { isValidVisitorId, validateVisitorId } from "./validators";
 
 const AUTO_FLAG_THRESHOLD = 5;
 
@@ -13,9 +13,7 @@ export const getVisitorReport = query({
     if (!isValidVisitorId(args.visitorId)) return false;
     const existing = await ctx.db
       .query("reports")
-      .withIndex("by_visitor_offer", (q) =>
-        q.eq("visitorId", args.visitorId).eq("offerId", args.offerId),
-      )
+      .withIndex("by_visitor_offer", (q) => q.eq("visitorId", args.visitorId).eq("offerId", args.offerId))
       .first();
     return existing !== null;
   },
@@ -36,21 +34,14 @@ export const report = mutation({
   args: {
     offerId: v.id("offers"),
     visitorId: v.string(),
-    reason: v.union(
-      v.literal("spam"),
-      v.literal("fake"),
-      v.literal("expired"),
-      v.literal("inappropriate"),
-    ),
+    reason: v.union(v.literal("spam"), v.literal("fake"), v.literal("expired"), v.literal("inappropriate")),
   },
   handler: async (ctx, args) => {
     validateVisitorId(args.visitorId);
     // Idempotent: one report per visitor per offer
     const existing = await ctx.db
       .query("reports")
-      .withIndex("by_visitor_offer", (q) =>
-        q.eq("visitorId", args.visitorId).eq("offerId", args.offerId),
-      )
+      .withIndex("by_visitor_offer", (q) => q.eq("visitorId", args.visitorId).eq("offerId", args.offerId))
       .first();
 
     if (existing) {

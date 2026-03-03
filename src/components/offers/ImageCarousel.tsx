@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ImageCarouselProps {
   images: string[];
@@ -53,7 +53,9 @@ export function ImageCarousel({ images, onImageClick }: ImageCarouselProps) {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+        onTouchStart={(e) => {
+          touchStartX.current = e.touches[0].clientX;
+        }}
         onTouchEnd={(e) => {
           const delta = touchStartX.current - e.changedTouches[0].clientX;
           if (Math.abs(delta) > 50) {
@@ -65,16 +67,13 @@ export function ImageCarousel({ images, onImageClick }: ImageCarouselProps) {
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {images.map((url, i) => (
-          <button
-            key={i}
-            onClick={() => onImageClick(i)}
-            className="flex-shrink-0 w-full snap-start"
-          >
+          <button key={i} onClick={() => onImageClick(i)} className="flex-shrink-0 w-full snap-start">
             <img
               src={url}
-              alt={`Image ${i + 1}`}
+              alt={`Photo ${i + 1}`}
               className="w-full h-48 sm:h-64 object-cover"
               loading={i === 0 ? "eager" : "lazy"}
+              decoding="async"
             />
           </button>
         ))}
@@ -114,9 +113,7 @@ export function ImageCarousel({ images, onImageClick }: ImageCarouselProps) {
               key={i}
               onClick={() => scrollToIndex(i)}
               className={`h-1.5 rounded-full transition-all ${
-                i === currentIndex
-                  ? "w-4 bg-white"
-                  : "w-1.5 bg-white/40"
+                i === currentIndex ? "w-4 bg-white" : "w-1.5 bg-white/40"
               }`}
             />
           ))}

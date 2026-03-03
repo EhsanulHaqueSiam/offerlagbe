@@ -1,18 +1,18 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import type { GeoJSONSource } from "maplibre-gl";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, {
-  type ViewStateChangeEvent,
+  GeolocateControl,
   type MapLayerMouseEvent,
   type MapRef,
-  NavigationControl,
-  GeolocateControl,
   Marker,
+  NavigationControl,
+  type ViewStateChangeEvent,
 } from "react-map-gl/maplibre";
 import { BANGLADESH_CENTER, DEFAULT_ZOOM } from "@/lib/geo";
-import { OfferBubbles, INTERACTIVE_LAYER_IDS } from "./OfferBubbles";
-import { OfferPopup } from "./OfferPopup";
-import type { Offer } from "@/types/offer";
 import type { UserLocation } from "@/lib/location";
-import type { GeoJSONSource } from "maplibre-gl";
+import type { Offer } from "@/types/offer";
+import { INTERACTIVE_LAYER_IDS, OfferBubbles } from "./OfferBubbles";
+import { OfferPopup } from "./OfferPopup";
 
 const MAP_STYLE = "https://tiles.openfreemap.org/styles/positron";
 
@@ -31,6 +31,7 @@ interface OfferMapProps {
   selectedOffer?: Offer | null;
   onSelectOffer?: (offer: Offer | null) => void;
   onBookmarkChange?: () => void;
+  onGeolocate?: (coords: { latitude: number; longitude: number }) => void;
 }
 
 export function OfferMap({
@@ -42,6 +43,7 @@ export function OfferMap({
   selectedOffer: controlledSelected,
   onSelectOffer,
   onBookmarkChange,
+  onGeolocate,
 }: OfferMapProps) {
   const mapRef = useRef<MapRef>(null);
   const center = userLocation ?? BANGLADESH_CENTER;
@@ -62,6 +64,20 @@ export function OfferMap({
     }
     return lookup;
   }, [offers]);
+
+  // Fly to user location when it changes (auto-detect or manual set)
+  const prevLocationKey = useRef(userLocation ? `${userLocation.latitude},${userLocation.longitude}` : null);
+  useEffect(() => {
+    const key = userLocation ? `${userLocation.latitude},${userLocation.longitude}` : null;
+    if (key && key !== prevLocationKey.current && mapRef.current) {
+      prevLocationKey.current = key;
+      mapRef.current.flyTo({
+        center: [userLocation!.longitude, userLocation!.latitude],
+        zoom: 14,
+        duration: 1500,
+      });
+    }
+  }, [userLocation]);
 
   const handleMove = useCallback((evt: ViewStateChangeEvent) => {
     setViewState(evt.viewState);
@@ -92,7 +108,7 @@ export function OfferMap({
       }
 
       // Offer point click
-      if (feature && feature.properties?.id) {
+      if (feature?.properties?.id) {
         const offer = offerLookup[feature.properties.id as string];
         if (offer) {
           setSelectedOffer(offer);
@@ -121,17 +137,18 @@ export function OfferMap({
         maxZoom={18}
       >
         <NavigationControl position="bottom-right" showCompass={false} />
-        <GeolocateControl position="bottom-right" />
+        <GeolocateControl
+          position="bottom-right"
+          onGeolocate={
+            onGeolocate ? (e) => onGeolocate({ latitude: e.coords.latitude, longitude: e.coords.longitude }) : undefined
+          }
+        />
 
         <OfferBubbles offers={offers} />
 
         {/* User location marker */}
         {userLocation && !pickMode && (
-          <Marker
-            latitude={userLocation.latitude}
-            longitude={userLocation.longitude}
-            anchor="center"
-          >
+          <Marker latitude={userLocation.latitude} longitude={userLocation.longitude} anchor="center">
             <div className="relative">
               <div className="w-4 h-4 bg-blue-500 rounded-full border-[2.5px] border-white shadow-lg" />
               <div className="absolute inset-0 w-4 h-4 bg-blue-500 rounded-full animate-ping opacity-30" />
@@ -148,14 +165,16 @@ export function OfferMap({
         )}
 
         {pickMode && pickedLocation && (
-          <Marker
-            latitude={pickedLocation.lat}
-            longitude={pickedLocation.lng}
-            anchor="bottom"
-          >
+          <Marker latitude={pickedLocation.lat} longitude={pickedLocation.lng} anchor="bottom">
             <div className="flex flex-col items-center animate-fade-in-up">
               <div className="w-7 h-7 bg-indigo-500 rounded-full border-[3px] border-white shadow-lg shadow-indigo-500/40 flex items-center justify-center">
-                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <svg
+                  className="w-3 h-3 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={3}
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 12h16" />
                 </svg>

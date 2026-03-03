@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useState } from "react";
 
 export type Language = "en" | "bn";
 
@@ -63,7 +63,7 @@ const en = {
   "submit.postOffer": "Post Offer",
   "submit.posting": "Posting...",
   "submit.tapMap": "Tap the map to set location",
-  "submit.tapMapHint": "Tap the map to pin the offer location, or press \"Use Current Location\"",
+  "submit.tapMapHint": 'Tap the map to pin the offer location, or press "Use Current Location"',
   "submit.adjustPin": "Tap the map to adjust the pin",
   "submit.dateHint": "Start defaults to today. Leave end date empty if no expiry.",
 
@@ -280,7 +280,7 @@ const bn: Record<keyof typeof en, string> = {
   "submit.postOffer": "অফার পোস্ট করুন",
   "submit.posting": "পোস্ট হচ্ছে...",
   "submit.tapMap": "ম্যাপে ট্যাপ করে লোকেশন সেট করুন",
-  "submit.tapMapHint": "ম্যাপে ট্যাপ করুন অথবা \"বর্তমান লোকেশন\" বাটন চাপুন",
+  "submit.tapMapHint": 'ম্যাপে ট্যাপ করুন অথবা "বর্তমান লোকেশন" বাটন চাপুন',
   "submit.adjustPin": "পিন সরাতে ম্যাপে ট্যাপ করুন",
   "submit.dateHint": "শুরুর তারিখ আজ। শেষ তারিখ না থাকলে খালি রাখুন।",
 
@@ -447,7 +447,9 @@ function getSavedLang(): Language {
   try {
     const saved = localStorage.getItem(LANG_KEY);
     if (saved === "bn") return "bn";
-  } catch {}
+  } catch {
+    /* localStorage unavailable */
+  }
   return "en";
 }
 
@@ -468,13 +470,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     [lang],
   );
 
-  return (
-    <I18nContext.Provider value={{ lang, setLang, t }}>
-      {children}
-    </I18nContext.Provider>
-  );
+  return <I18nContext.Provider value={{ lang, setLang, t }}>{children}</I18nContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useTranslation() {
   const ctx = useContext(I18nContext);
   if (!ctx) throw new Error("useTranslation must be used within I18nProvider");

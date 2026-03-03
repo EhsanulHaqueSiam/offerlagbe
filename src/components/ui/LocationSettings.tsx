@@ -1,18 +1,18 @@
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import MapGL, {
   type MapLayerMouseEvent,
-  type ViewStateChangeEvent,
-  NavigationControl,
   Marker,
+  NavigationControl,
+  type ViewStateChangeEvent,
 } from "react-map-gl/maplibre";
+import { BANGLADESH_CENTER, DEFAULT_ZOOM } from "@/lib/geo";
 import {
-  getUserLocation,
-  setUserLocation,
   clearUserLocation,
+  getUserLocation,
   requestGPSLocation,
+  setUserLocation,
   type UserLocation,
 } from "@/lib/location";
-import { BANGLADESH_CENTER, DEFAULT_ZOOM } from "@/lib/geo";
 import { toast } from "@/lib/toast";
 
 interface LocationSettingsProps {
@@ -20,17 +20,12 @@ interface LocationSettingsProps {
   onLocationChange: (loc: UserLocation | null) => void;
 }
 
-export function LocationSettings({
-  onClose,
-  onLocationChange,
-}: LocationSettingsProps) {
+export function LocationSettings({ onClose, onLocationChange }: LocationSettingsProps) {
   const existing = getUserLocation();
   const [picked, setPicked] = useState<{
     latitude: number;
     longitude: number;
-  } | null>(
-    existing ? { latitude: existing.latitude, longitude: existing.longitude } : null,
-  );
+  } | null>(existing ? { latitude: existing.latitude, longitude: existing.longitude } : null);
   const [label, setLabel] = useState(existing?.label ?? "");
   const [detectingGps, setDetectingGps] = useState(false);
   const [viewState, setViewState] = useState({
@@ -86,9 +81,7 @@ export function LocationSettings({
       <div className="relative z-10 w-full max-w-lg mx-auto glass-strong rounded-t-2xl md:rounded-2xl overflow-hidden animate-slide-up md:animate-scale-in max-h-[90dvh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700/30">
-          <h2 className="text-base font-semibold text-white">
-            Set Your Location
-          </h2>
+          <h2 className="text-base font-semibold text-white">Set Your Location</h2>
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700/50 transition-colors"
@@ -122,8 +115,18 @@ export function LocationSettings({
             ) : (
               <>
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
                 </svg>
                 Use My GPS Location
               </>
@@ -155,9 +158,7 @@ export function LocationSettings({
 
           {/* Label input */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">
-              Location Name (optional)
-            </label>
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">Location Name (optional)</label>
             <input
               type="text"
               value={label}

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Source, Layer, type LayerProps } from "react-map-gl/maplibre";
+import { Layer, type LayerProps, Source } from "react-map-gl/maplibre";
 import { getCategoryColor } from "@/lib/categories";
 import type { Offer } from "@/types/offer";
 
@@ -30,6 +30,8 @@ export function OfferBubbles({ offers }: OfferBubblesProps) {
     };
   }, [offers]);
 
+  // --- Cluster layers ---
+
   const clusterLayer: LayerProps = {
     id: "clusters",
     type: "circle",
@@ -39,18 +41,41 @@ export function OfferBubbles({ offers }: OfferBubblesProps) {
       "circle-color": [
         "step",
         ["get", "point_count"],
-        "rgba(99, 102, 241, 0.7)",
+        "rgba(99, 102, 241, 0.85)",
         10,
-        "rgba(139, 92, 246, 0.7)",
+        "rgba(139, 92, 246, 0.85)",
         30,
-        "rgba(236, 72, 153, 0.7)",
+        "rgba(236, 72, 153, 0.85)",
       ],
-      "circle-radius": ["step", ["get", "point_count"], 20, 10, 28, 30, 36],
-      "circle-stroke-width": 2,
-      "circle-stroke-color": "rgba(255, 255, 255, 0.2)",
+      "circle-radius": ["step", ["get", "point_count"], 24, 10, 32, 30, 42],
+      "circle-stroke-width": 2.5,
+      "circle-stroke-color": "rgba(255, 255, 255, 0.25)",
     },
   };
 
+  // Outer ring pulse effect on clusters
+  const clusterRingLayer: LayerProps = {
+    id: "cluster-ring",
+    type: "circle",
+    source: "offers",
+    filter: ["has", "point_count"],
+    paint: {
+      "circle-color": "transparent",
+      "circle-radius": ["step", ["get", "point_count"], 28, 10, 36, 30, 46],
+      "circle-stroke-width": 1.5,
+      "circle-stroke-color": [
+        "step",
+        ["get", "point_count"],
+        "rgba(99, 102, 241, 0.3)",
+        10,
+        "rgba(139, 92, 246, 0.3)",
+        30,
+        "rgba(236, 72, 153, 0.3)",
+      ],
+    },
+  };
+
+  // Cluster count number
   const clusterCountLayer: LayerProps = {
     id: "cluster-count",
     type: "symbol",
@@ -58,14 +83,55 @@ export function OfferBubbles({ offers }: OfferBubblesProps) {
     filter: ["has", "point_count"],
     layout: {
       "text-field": "{point_count_abbreviated}",
-      "text-font": ["Noto Sans Regular"],
-      "text-size": 13,
+      "text-font": ["Noto Sans Bold"],
+      "text-size": ["step", ["get", "point_count"], 13, 10, 15, 30, 17],
+      "text-offset": [0, -0.15],
+      "text-allow-overlap": true,
     },
     paint: {
       "text-color": "#ffffff",
     },
   };
 
+  // "offers" label under count
+  const clusterLabelLayer: LayerProps = {
+    id: "cluster-label",
+    type: "symbol",
+    source: "offers",
+    filter: ["has", "point_count"],
+    layout: {
+      "text-field": "offers",
+      "text-font": ["Noto Sans Regular"],
+      "text-size": 9,
+      "text-offset": [0, 0.8],
+      "text-allow-overlap": true,
+    },
+    paint: {
+      "text-color": "rgba(255, 255, 255, 0.7)",
+    },
+  };
+
+  // Best deal badge text inside clusters
+  const clusterDealLayer: LayerProps = {
+    id: "cluster-deal",
+    type: "symbol",
+    source: "offers",
+    filter: ["has", "point_count"],
+    layout: {
+      "text-field": ["concat", "up to ", ["to-string", ["get", "maxDiscount"]], "%"],
+      "text-font": ["Noto Sans Regular"],
+      "text-size": 9,
+      "text-offset": [0, 1.8],
+      "text-allow-overlap": true,
+    },
+    paint: {
+      "text-color": "rgba(253, 224, 71, 0.9)",
+    },
+  };
+
+  // --- Individual offer layers ---
+
+  // Soft glow behind each bubble
   const offerGlowLayer: LayerProps = {
     id: "offer-glow",
     type: "circle",
@@ -73,22 +139,13 @@ export function OfferBubbles({ offers }: OfferBubblesProps) {
     filter: ["!", ["has", "point_count"]],
     paint: {
       "circle-color": ["get", "color"],
-      "circle-radius": [
-        "interpolate",
-        ["linear"],
-        ["get", "discountPercent"],
-        0,
-        12,
-        50,
-        28,
-        100,
-        44,
-      ],
-      "circle-opacity": 0.15,
+      "circle-radius": ["interpolate", ["linear"], ["get", "discountPercent"], 0, 18, 50, 34, 100, 52],
+      "circle-opacity": 0.12,
       "circle-blur": 1,
     },
   };
 
+  // Main circle for each offer
   const offerLayer: LayerProps = {
     id: "offer-points",
     type: "circle",
@@ -96,30 +153,31 @@ export function OfferBubbles({ offers }: OfferBubblesProps) {
     filter: ["!", ["has", "point_count"]],
     paint: {
       "circle-color": ["get", "color"],
-      "circle-radius": [
-        "interpolate",
-        ["linear"],
-        ["get", "discountPercent"],
-        0,
-        6,
-        25,
-        10,
-        50,
-        16,
-        75,
-        22,
-        100,
-        30,
-      ],
-      "circle-opacity": [
-        "case",
-        ["==", ["get", "status"], "flagged"],
-        0.4,
-        0.75,
-      ],
+      "circle-radius": ["interpolate", ["linear"], ["get", "discountPercent"], 5, 14, 25, 18, 50, 22, 75, 26, 100, 32],
+      "circle-opacity": ["case", ["==", ["get", "status"], "flagged"], 0.5, 0.85],
       "circle-stroke-width": 2,
-      "circle-stroke-color": "rgba(255, 255, 255, 0.3)",
-      "circle-stroke-opacity": 0.8,
+      "circle-stroke-color": "rgba(255, 255, 255, 0.35)",
+      "circle-stroke-opacity": 0.9,
+    },
+  };
+
+  // Discount percentage text inside each bubble
+  const offerLabelLayer: LayerProps = {
+    id: "offer-label",
+    type: "symbol",
+    source: "offers",
+    filter: ["!", ["has", "point_count"]],
+    layout: {
+      "text-field": ["concat", ["to-string", ["get", "discountPercent"]], "%"],
+      "text-font": ["Noto Sans Bold"],
+      "text-size": ["interpolate", ["linear"], ["get", "discountPercent"], 5, 10, 25, 11, 50, 13, 75, 15, 100, 18],
+      "text-allow-overlap": true,
+      "text-ignore-placement": true,
+    },
+    paint: {
+      "text-color": "#ffffff",
+      "text-halo-color": "rgba(0, 0, 0, 0.5)",
+      "text-halo-width": 0.8,
     },
   };
 
@@ -131,13 +189,21 @@ export function OfferBubbles({ offers }: OfferBubblesProps) {
       cluster={true}
       clusterMaxZoom={14}
       clusterRadius={50}
+      clusterProperties={{
+        maxDiscount: ["max", ["get", "discountPercent"]],
+      }}
     >
       <Layer {...offerGlowLayer} />
+      <Layer {...clusterRingLayer} />
       <Layer {...clusterLayer} />
       <Layer {...clusterCountLayer} />
+      <Layer {...clusterLabelLayer} />
+      <Layer {...clusterDealLayer} />
       <Layer {...offerLayer} />
+      <Layer {...offerLabelLayer} />
     </Source>
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const INTERACTIVE_LAYER_IDS = ["offer-points", "clusters"];

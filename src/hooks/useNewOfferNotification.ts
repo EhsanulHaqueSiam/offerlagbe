@@ -2,10 +2,7 @@ import { useEffect, useRef } from "react";
 import { toast } from "@/lib/toast";
 import type { Offer } from "@/types/offer";
 
-export function useNewOfferNotification(
-  offers: Offer[] | undefined,
-  onOfferClick?: (offer: Offer) => void,
-) {
+export function useNewOfferNotification(offers: Offer[] | undefined, onOfferClick?: (offer: Offer) => void) {
   const prevIdsRef = useRef<Set<string> | null>(null);
   const initializedRef = useRef(false);
 

@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { validateVisitorId } from "./validators";
 
 // Truncate visitorId in responses to prevent identity theft
@@ -46,9 +46,7 @@ export const create = mutation({
       .withIndex("by_offer", (q) => q.eq("offerId", args.offerId))
       .collect();
 
-    const visitorRecent = recentComments.filter(
-      (c) => c.visitorId === args.visitorId && c.createdAt > oneHourAgo,
-    );
+    const visitorRecent = recentComments.filter((c) => c.visitorId === args.visitorId && c.createdAt > oneHourAgo);
 
     if (visitorRecent.length >= 5) {
       throw new Error("Too many comments. Please wait before posting again.");

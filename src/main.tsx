@@ -1,10 +1,10 @@
+import { createRouter, RouterProvider } from "@tanstack/react-router";
+import { ConvexProvider } from "convex/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { ConvexProvider } from "convex/react";
-import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { convex } from "./lib/convex";
-import { routeTree } from "./routeTree.gen";
 import { I18nProvider } from "./lib/i18n";
+import { routeTree } from "./routeTree.gen";
 import "./index.css";
 
 const router = createRouter({ routeTree });

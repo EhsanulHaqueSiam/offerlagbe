@@ -1,28 +1,28 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery, useMutation } from "convex/react";
-import { useState, useEffect, useRef } from "react";
-import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
-import { CATEGORY_MAP } from "@/lib/categories";
-import type { CategoryId } from "@/lib/categories";
-import { VoteButtons } from "@/components/voting/VoteButtons";
-import { TrustBadge } from "@/components/voting/TrustBadge";
+import { useMutation, useQuery } from "convex/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import MapGL, { Marker } from "react-map-gl/maplibre";
+import { CommentSection, CommentSectionSkeleton } from "@/components/offers/CommentSection";
+import { CountdownTimer } from "@/components/offers/CountdownTimer";
+import { CouponBadge } from "@/components/offers/CouponBadge";
+import { ImageCarousel } from "@/components/offers/ImageCarousel";
+import { NearbyOffersSection } from "@/components/offers/NearbyOffersSection";
+import { ReportModal } from "@/components/offers/ReportModal";
+import { RichText } from "@/components/offers/RichText";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
-import { shareOffer, getWhatsAppShareUrl } from "@/lib/share";
-import { toggleBookmark, isBookmarked } from "@/lib/bookmarks";
+import { TrustBadge } from "@/components/voting/TrustBadge";
+import { VoteButtons } from "@/components/voting/VoteButtons";
+import { isBookmarked, toggleBookmark } from "@/lib/bookmarks";
+import type { CategoryId } from "@/lib/categories";
+import { CATEGORY_MAP } from "@/lib/categories";
 import { getDirectionsUrl } from "@/lib/directions";
 import { formatOfferDate } from "@/lib/expiry";
-import { toast } from "@/lib/toast";
 import { useTranslation } from "@/lib/i18n";
-import { CouponBadge } from "@/components/offers/CouponBadge";
-import { CommentSection, CommentSectionSkeleton } from "@/components/offers/CommentSection";
-import { ImageCarousel } from "@/components/offers/ImageCarousel";
-import { CountdownTimer } from "@/components/offers/CountdownTimer";
-import { RichText } from "@/components/offers/RichText";
-import { ReportModal } from "@/components/offers/ReportModal";
-import { NearbyOffersSection } from "@/components/offers/NearbyOffersSection";
+import { getWhatsAppShareUrl, shareOffer } from "@/lib/share";
+import { toast } from "@/lib/toast";
 import type { Offer } from "@/types/offer";
-import MapGL, { Marker } from "react-map-gl/maplibre";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 
 export const Route = createFileRoute("/offer/$id")({
   component: OfferDetailPage,
@@ -38,7 +38,7 @@ function OfferDetailPage() {
   const incrementView = useMutation(api.offers.incrementView);
   const viewedRef = useRef(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarkVersion, setBookmarkVersion] = useState(0);
   const [showReport, setShowReport] = useState(false);
 
   // Lazy load comments via IntersectionObserver
@@ -58,19 +58,24 @@ function OfferDetailPage() {
     for (const { ref, setter, visible } of refs) {
       if (!ref.current || visible) continue;
       const observer = new IntersectionObserver(
-        ([entry]) => { if (entry.isIntersecting) setter(true); },
+        ([entry]) => {
+          if (entry.isIntersecting) setter(true);
+        },
         { rootMargin: "200px" },
       );
       observer.observe(ref.current);
       observers.push(observer);
     }
-    return () => observers.forEach((o) => o.disconnect());
+    return () => {
+      for (const o of observers) o.disconnect();
+    };
   }, [commentsVisible, nearbyVisible]);
 
-  useEffect(() => {
-    if (!offer) return;
-    setBookmarked(isBookmarked(offer._id));
-  }, [offer]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: bookmarkVersion triggers recomputation
+  const bookmarked = useMemo(() => {
+    void bookmarkVersion;
+    return offer ? isBookmarked(offer._id) : false;
+  }, [offer?._id, bookmarkVersion]);
 
   // Track view once per session
   useEffect(() => {
@@ -143,7 +148,7 @@ function OfferDetailPage() {
 
   const handleBookmark = () => {
     const added = toggleBookmark(offer._id);
-    setBookmarked(added);
+    setBookmarkVersion((v) => v + 1);
     toast(added ? t("offer.saved") : t("offer.bookmarkRemoved"), added ? "success" : "info");
   };
 
@@ -169,8 +174,18 @@ function OfferDetailPage() {
               className="w-8 h-8 rounded-lg bg-slate-800/60 flex items-center justify-center transition-colors hover:bg-slate-700"
               aria-label={bookmarked ? "Remove bookmark" : "Save offer"}
             >
-              <svg className={`w-4 h-4 ${bookmarked ? "text-pink-400 fill-pink-400" : "text-slate-400"}`} fill={bookmarked ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              <svg
+                className={`w-4 h-4 ${bookmarked ? "text-pink-400 fill-pink-400" : "text-slate-400"}`}
+                fill={bookmarked ? "currentColor" : "none"}
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                />
               </svg>
             </button>
             <button
@@ -179,7 +194,11 @@ function OfferDetailPage() {
               aria-label="Share offer"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                />
               </svg>
             </button>
             <button
@@ -188,7 +207,11 @@ function OfferDetailPage() {
               aria-label="Report offer"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2z"
+                />
               </svg>
             </button>
           </div>
@@ -198,10 +221,7 @@ function OfferDetailPage() {
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-5 animate-fade-in-up">
         {/* Hero images */}
         {offer.imageUrls.length > 0 && (
-          <ImageCarousel
-            images={offer.imageUrls}
-            onImageClick={(i) => setLightboxIndex(i)}
-          />
+          <ImageCarousel images={offer.imageUrls} onImageClick={(i) => setLightboxIndex(i)} />
         )}
 
         {/* Title + Discount + Badges */}
@@ -221,22 +241,31 @@ function OfferDetailPage() {
               {offer.storeName}
             </Link>
           </div>
-          <div className="flex-shrink-0 rounded-2xl px-4 py-3 text-center" style={{ backgroundColor: `${category?.color ?? "#64748b"}15`, border: `1px solid ${category?.color ?? "#64748b"}30` }}>
-            <span className="text-2xl font-bold leading-none" style={{ color: category?.color }}>{offer.discountPercent}%</span>
+          <div
+            className="flex-shrink-0 rounded-2xl px-4 py-3 text-center"
+            style={{
+              backgroundColor: `${category?.color ?? "#64748b"}15`,
+              border: `1px solid ${category?.color ?? "#64748b"}30`,
+            }}
+          >
+            <span className="text-2xl font-bold leading-none" style={{ color: category?.color }}>
+              {offer.discountPercent}%
+            </span>
             <span className="block text-[10px] text-slate-500 mt-0.5 font-medium">{t("offer.off")}</span>
           </div>
         </div>
 
         {/* Description */}
-        {offer.description && (
-          <RichText text={offer.description} />
-        )}
+        {offer.description && <RichText text={offer.description} />}
 
         {/* Tags */}
         {offer.tags && offer.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {offer.tags.map((tag) => (
-              <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-slate-700/40 text-slate-400 font-medium">
+              <span
+                key={tag}
+                className="text-[10px] px-2 py-0.5 rounded-full bg-slate-700/40 text-slate-400 font-medium"
+              >
                 {t(`tag.${tag}` as Parameters<typeof t>[0])}
               </span>
             ))}
@@ -254,16 +283,24 @@ function OfferDetailPage() {
         )}
 
         {/* Coupon Code */}
-        {offer.couponCode && (
-          <CouponBadge code={offer.couponCode} />
-        )}
+        {offer.couponCode && <CouponBadge code={offer.couponCode} />}
 
         {/* Info cards */}
         <div className="glass rounded-2xl p-4 space-y-3">
           {/* Location */}
           <div className="flex items-center gap-2 text-sm text-slate-300">
-            <svg className="w-4 h-4 flex-shrink-0 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <svg
+              className="w-4 h-4 flex-shrink-0 text-slate-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+              />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             <span>{offer.address}</span>
@@ -282,7 +319,10 @@ function OfferDetailPage() {
               keyboard={false}
             >
               <Marker latitude={offer.latitude} longitude={offer.longitude} anchor="bottom">
-                <div className="w-6 h-6 rounded-full border-[2.5px] border-white shadow-lg" style={{ backgroundColor: category?.color ?? "#6366f1" }} />
+                <div
+                  className="w-6 h-6 rounded-full border-[2.5px] border-white shadow-lg"
+                  style={{ backgroundColor: category?.color ?? "#6366f1" }}
+                />
               </Marker>
             </MapGL>
           </div>
@@ -295,7 +335,11 @@ function OfferDetailPage() {
             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/15 transition-all active:scale-[0.98] text-sm font-medium"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+              />
             </svg>
             {t("offer.getDirections")}
           </a>
@@ -303,8 +347,18 @@ function OfferDetailPage() {
           {/* Dates */}
           {(offer.startDate || offer.endDate) && (
             <div className="flex items-center gap-2 text-sm text-slate-300">
-              <svg className="w-4 h-4 flex-shrink-0 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <svg
+                className="w-4 h-4 flex-shrink-0 text-slate-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
               </svg>
               <span>
                 {offer.startDate && formatOfferDate(offer.startDate)}
@@ -316,20 +370,30 @@ function OfferDetailPage() {
 
           {/* Views */}
           <div className="flex items-center gap-2 text-sm text-slate-400">
-            <svg className="w-4 h-4 flex-shrink-0 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg
+              className="w-4 h-4 flex-shrink-0 text-slate-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+              />
             </svg>
-            <span>{offer.views ?? 0} {(offer.views ?? 0) === 1 ? "view" : t("offer.views")}</span>
+            <span>
+              {offer.views ?? 0} {(offer.views ?? 0) === 1 ? "view" : t("offer.views")}
+            </span>
           </div>
         </div>
 
         {/* Flagged warning */}
         {offer.status === "flagged" && (
           <div className="bg-amber-500/8 border border-amber-500/20 rounded-xl px-4 py-3">
-            <p className="text-xs text-amber-400 font-medium">
-              {t("offer.flaggedWarning")}
-            </p>
+            <p className="text-xs text-amber-400 font-medium">{t("offer.flaggedWarning")}</p>
           </div>
         )}
 
@@ -347,7 +411,11 @@ function OfferDetailPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800/60 text-slate-400 hover:bg-indigo-500/10 hover:text-indigo-300 transition-all active:scale-95"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                />
               </svg>
               {t("offer.share")}
             </button>
@@ -364,20 +432,12 @@ function OfferDetailPage() {
 
         {/* Nearby offers (lazy loaded) */}
         <div ref={nearbyRef}>
-          {nearbyVisible ? (
-            <NearbyOffersSection offerId={offer._id} />
-          ) : (
-            <div className="h-20" />
-          )}
+          {nearbyVisible ? <NearbyOffersSection offerId={offer._id} /> : <div className="h-20" />}
         </div>
 
         {/* Comments (lazy loaded) */}
         <div ref={commentsRef}>
-          {commentsVisible ? (
-            <CommentSection offerId={offer._id} />
-          ) : (
-            <CommentSectionSkeleton />
-          )}
+          {commentsVisible ? <CommentSection offerId={offer._id} /> : <CommentSectionSkeleton />}
         </div>
       </div>
 
@@ -400,9 +460,7 @@ function OfferDetailPage() {
       )}
 
       {/* Report modal */}
-      {showReport && (
-        <ReportModal offerId={offer._id} onClose={() => setShowReport(false)} />
-      )}
+      {showReport && <ReportModal offerId={offer._id} onClose={() => setShowReport(false)} />}
     </div>
   );
 }

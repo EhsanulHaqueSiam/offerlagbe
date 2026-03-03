@@ -1,9 +1,9 @@
 import { useMutation, useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { getVisitorId } from "@/lib/visitor";
+import { useCallback, useRef, useState } from "react";
 import { toast } from "@/lib/toast";
+import { getVisitorId } from "@/lib/visitor";
+import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
-import { useState, useRef, useCallback } from "react";
 
 interface VoteButtonsProps {
   offerId: Id<"offers">;
@@ -33,10 +33,7 @@ export function VoteButtons({ offerId, upvotes, downvotes }: VoteButtonsProps) {
         if (result === "removed") {
           toast("Vote removed", "info");
         } else {
-          toast(
-            voteType === "up" ? "Marked as legit!" : "Reported as false",
-            voteType === "up" ? "success" : "info",
-          );
+          toast(voteType === "up" ? "Marked as legit!" : "Reported as false", voteType === "up" ? "success" : "info");
         }
       } catch {
         toast("Could not vote. Try again.", "error");

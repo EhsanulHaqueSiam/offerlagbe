@@ -39,9 +39,7 @@ export const CATEGORIES: Category[] = [
   { id: "services", label: "Services", color: "#64748b", emoji: "🔧" },
 ];
 
-export const CATEGORY_MAP = Object.fromEntries(
-  CATEGORIES.map((c) => [c.id, c]),
-) as Record<CategoryId, Category>;
+export const CATEGORY_MAP = Object.fromEntries(CATEGORIES.map((c) => [c.id, c])) as Record<CategoryId, Category>;
 
 export function getCategoryColor(categoryId: string): string {
   return CATEGORY_MAP[categoryId as CategoryId]?.color ?? "#64748b";

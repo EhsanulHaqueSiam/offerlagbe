@@ -12,11 +12,7 @@ function loadImage(file: File): Promise<HTMLImageElement> {
   });
 }
 
-function canvasToBlob(
-  canvas: HTMLCanvasElement,
-  type: string,
-  quality: number,
-): Promise<Blob> {
+function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
@@ -102,12 +98,7 @@ export async function compressImage(file: File): Promise<File> {
 }
 
 export function validateImageFile(file: File): string | null {
-  const validTypes = [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/gif",
-  ];
+  const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
   if (!validTypes.includes(file.type)) {
     return "Invalid file type. Use JPEG, PNG, WebP, or GIF.";
   }

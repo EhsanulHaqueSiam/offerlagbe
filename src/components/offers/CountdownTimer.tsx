@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { getCountdown } from "@/lib/countdown";
 import { useTranslation } from "@/lib/i18n";
 
@@ -32,7 +32,9 @@ export function CountdownTimer({ endDate, compact }: CountdownTimerProps) {
       <span className="flex items-center gap-0.5 text-[9px] bg-orange-500/10 text-orange-400 px-1.5 py-0.5 rounded-full font-medium">
         <span className="w-1 h-1 rounded-full bg-orange-400 animate-pulse" />
         {days > 0 && `${days}${t("countdown.days")} `}
-        {hours}{t("countdown.hours")} {minutes}{t("countdown.minutes")}
+        {hours}
+        {t("countdown.hours")} {minutes}
+        {t("countdown.minutes")}
       </span>
     );
   }
@@ -43,18 +45,22 @@ export function CountdownTimer({ endDate, compact }: CountdownTimerProps) {
       <div className="flex items-center gap-1">
         {days > 0 && (
           <span className="bg-orange-500/10 text-orange-400 px-2 py-1 rounded-lg font-bold text-xs">
-            {days}{t("countdown.days")}
+            {days}
+            {t("countdown.days")}
           </span>
         )}
         <span className="bg-orange-500/10 text-orange-400 px-2 py-1 rounded-lg font-bold text-xs">
-          {hours}{t("countdown.hours")}
+          {hours}
+          {t("countdown.hours")}
         </span>
         <span className="bg-orange-500/10 text-orange-400 px-2 py-1 rounded-lg font-bold text-xs">
-          {minutes}{t("countdown.minutes")}
+          {minutes}
+          {t("countdown.minutes")}
         </span>
         {days === 0 && (
           <span className="bg-red-500/10 text-red-400 px-2 py-1 rounded-lg font-bold text-xs tabular-nums">
-            {seconds}{t("countdown.seconds")}
+            {seconds}
+            {t("countdown.seconds")}
           </span>
         )}
       </div>

@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
-import { validateVisitorId, isValidVisitorId } from "./validators";
+import { mutation, query } from "./_generated/server";
+import { isValidVisitorId, validateVisitorId } from "./validators";
 
 // Only flag when truly overwhelmingly negative:
 // Need at least 15 total votes AND less than 20% are positive
@@ -25,9 +25,7 @@ export const getVisitorVote = query({
     if (!isValidVisitorId(args.visitorId)) return null;
     const vote = await ctx.db
       .query("votes")
-      .withIndex("by_visitor_offer", (q) =>
-        q.eq("visitorId", args.visitorId).eq("offerId", args.offerId),
-      )
+      .withIndex("by_visitor_offer", (q) => q.eq("visitorId", args.visitorId).eq("offerId", args.offerId))
       .first();
     return vote?.voteType ?? null;
   },
@@ -63,9 +61,7 @@ export const vote = mutation({
     // Check for existing vote
     const existing = await ctx.db
       .query("votes")
-      .withIndex("by_visitor_offer", (q) =>
-        q.eq("visitorId", args.visitorId).eq("offerId", args.offerId),
-      )
+      .withIndex("by_visitor_offer", (q) => q.eq("visitorId", args.visitorId).eq("offerId", args.offerId))
       .first();
 
     if (existing) {
@@ -123,26 +119,15 @@ export const vote = mutation({
     const trustScore = total > 0 ? (updated.upvotes / total) * 100 : 100;
 
     // Tier 1: Remove completely — overwhelming negative (30+ votes, <10% trust)
-    if (
-      total >= REMOVE_MIN_VOTES &&
-      trustScore < REMOVE_TRUST_THRESHOLD &&
-      updated.status !== "removed"
-    ) {
+    if (total >= REMOVE_MIN_VOTES && trustScore < REMOVE_TRUST_THRESHOLD && updated.status !== "removed") {
       await ctx.db.patch(args.offerId, { status: "removed" });
     }
     // Tier 2: Flag as suspicious — significant negative (15+ votes, <20% trust)
-    else if (
-      total >= FLAG_MIN_VOTES &&
-      trustScore < FLAG_TRUST_THRESHOLD &&
-      updated.status === "active"
-    ) {
+    else if (total >= FLAG_MIN_VOTES && trustScore < FLAG_TRUST_THRESHOLD && updated.status === "active") {
       await ctx.db.patch(args.offerId, { status: "flagged" });
     }
     // Recovery: community brings trust back up
-    else if (
-      updated.status === "flagged" &&
-      trustScore >= UNFLAG_TRUST_THRESHOLD
-    ) {
+    else if (updated.status === "flagged" && trustScore >= UNFLAG_TRUST_THRESHOLD) {
       await ctx.db.patch(args.offerId, { status: "active" });
     }
 

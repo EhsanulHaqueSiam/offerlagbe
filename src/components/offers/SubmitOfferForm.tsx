@@ -1,18 +1,25 @@
-import { useState, useCallback, useEffect, useRef } from "react";
-import { useMutation, useConvex } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { CATEGORIES } from "@/lib/categories";
-import { OfferMap } from "../map/OfferMap";
-import { compressImage, validateImageFile } from "@/lib/image";
-import { toast } from "@/lib/toast";
-import { useTranslation } from "@/lib/i18n";
-import { getLocationWithFallback, requestGPSLocation } from "@/lib/location";
-import { getVisitorId } from "@/lib/visitor";
-import { RichText } from "./RichText";
 import { useNavigate } from "@tanstack/react-router";
+import { useConvex, useMutation } from "convex/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { CATEGORIES } from "@/lib/categories";
+import { useTranslation } from "@/lib/i18n";
+import { compressImage, validateImageFile } from "@/lib/image";
+import { getLocationWithFallback, requestGPSLocation } from "@/lib/location";
+import { toast } from "@/lib/toast";
+import { getVisitorId } from "@/lib/visitor";
+import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { OfferMap } from "../map/OfferMap";
+import { RichText } from "./RichText";
 
-const ALLOWED_TAGS = ["verified", "limited-stock", "online-only", "in-store-only", "members-only", "new-arrival"] as const;
+const ALLOWED_TAGS = [
+  "verified",
+  "limited-stock",
+  "online-only",
+  "in-store-only",
+  "members-only",
+  "new-arrival",
+] as const;
 
 interface FormData {
   storeName: string;
@@ -70,18 +77,23 @@ export function SubmitOfferForm() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [moreDetails, setMoreDetails] = useState(false);
   const [locationLoading, setLocationLoading] = useState(true);
   const [gpsRequesting, setGpsRequesting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const createOffer = useMutation(api.offers.create);
   const generateUploadUrl = useMutation(api.offers.generateUploadUrl);
   const convex = useConvex();
   const navigate = useNavigate();
-  const [duplicates, setDuplicates] = useState<{ _id: string; title: string; storeName: string; discountPercent: number; address: string }[]>([]);
+  const [duplicates, setDuplicates] = useState<
+    { _id: string; title: string; storeName: string; discountPercent: number; address: string }[]
+  >([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [previewMode, setPreviewMode] = useState(false);
 
@@ -137,6 +149,30 @@ export function SubmitOfferForm() {
     setErrors((prev) => ({ ...prev, location: undefined }));
   }, []);
 
+  const handleLogoSelect = async (files: FileList) => {
+    const file = files[0];
+    if (!file) return;
+    const err = validateImageFile(file);
+    if (err) {
+      toast(`${file.name}: ${err}`, "error");
+      return;
+    }
+    try {
+      const compressed = await compressImage(file);
+      if (logoPreview) URL.revokeObjectURL(logoPreview);
+      setLogoFile(compressed);
+      setLogoPreview(URL.createObjectURL(compressed));
+    } catch {
+      toast(`Could not process ${file.name}`, "error");
+    }
+  };
+
+  const removeLogo = () => {
+    if (logoPreview) URL.revokeObjectURL(logoPreview);
+    setLogoFile(null);
+    setLogoPreview(null);
+  };
+
   const handleImagesSelect = async (files: FileList) => {
     const remaining = 5 - imageFiles.length;
     const toProcess = Array.from(files).slice(0, remaining);
@@ -174,14 +210,11 @@ export function SubmitOfferForm() {
     if (!form.storeName.trim()) errs.storeName = t("error.storeRequired");
     if (!form.title.trim()) errs.title = t("error.titleRequired");
     const disc = Number(form.discountPercent);
-    if (!form.discountPercent || disc <= 0 || disc > 100)
-      errs.discountPercent = t("error.discountRange");
+    if (!form.discountPercent || disc <= 0 || disc > 100) errs.discountPercent = t("error.discountRange");
     if (!form.category) errs.category = t("error.categoryRequired");
-    if (form.latitude === null || form.longitude === null)
-      errs.location = t("error.locationRequired");
+    if (form.latitude === null || form.longitude === null) errs.location = t("error.locationRequired");
     if (!form.address.trim()) errs.address = t("error.addressRequired");
-    if (form.startDate && form.endDate && form.endDate < form.startDate)
-      errs.dates = t("error.dateOrder");
+    if (form.startDate && form.endDate && form.endDate < form.startDate) errs.dates = t("error.dateOrder");
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -189,6 +222,13 @@ export function SubmitOfferForm() {
   const doSubmit = async () => {
     setSubmitting(true);
     try {
+      // Upload logo if provided
+      let logoStorageId: Id<"_storage"> | undefined;
+      if (logoFile) {
+        setUploadProgress("Uploading logo...");
+        logoStorageId = await uploadFile(logoFile);
+      }
+
       const imageStorageIds: Id<"_storage">[] = [];
       if (imageFiles.length > 0) {
         setUploadProgress(`Uploading ${imageFiles.length} photo${imageFiles.length > 1 ? "s" : ""}...`);
@@ -202,14 +242,13 @@ export function SubmitOfferForm() {
         description: form.description.trim() || undefined,
         category: form.category,
         discountPercent: Number(form.discountPercent),
-        originalPrice: form.originalPrice
-          ? Number(form.originalPrice)
-          : undefined,
+        originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
         offerPrice: form.offerPrice ? Number(form.offerPrice) : undefined,
         latitude: form.latitude!,
         longitude: form.longitude!,
         address: form.address.trim(),
         storeName: form.storeName.trim(),
+        logoStorageId,
         imageStorageIds,
         startDate: form.startDate || undefined,
         endDate: form.endDate || undefined,
@@ -221,12 +260,7 @@ export function SubmitOfferForm() {
       toast(t("toast.offerPosted"), "success");
       navigate({ to: "/" });
     } catch (err) {
-      toast(
-        err instanceof Error
-          ? err.message
-          : "Failed to post. Please try again.",
-        "error",
-      );
+      toast(err instanceof Error ? err.message : "Failed to post. Please try again.", "error");
     } finally {
       setSubmitting(false);
       setUploadProgress("");
@@ -258,38 +292,93 @@ export function SubmitOfferForm() {
 
   const inputClass = (hasError?: string) =>
     `w-full bg-slate-800/50 border ${
-      hasError
-        ? "border-red-500/50 focus:ring-red-500/40"
-        : "border-slate-700/40 focus:ring-indigo-500/40"
+      hasError ? "border-red-500/50 focus:ring-red-500/40" : "border-slate-700/40 focus:ring-indigo-500/40"
     } rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition-all`;
 
-  const ErrorMsg = ({ msg }: { msg?: string }) =>
-    msg ? <p className="text-xs text-red-400 mt-1">{msg}</p> : null;
+  const ErrorMsg = ({ msg }: { msg?: string }) => (msg ? <p className="text-xs text-red-400 mt-1">{msg}</p> : null);
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-4 pb-28">
       <div className="space-y-5 animate-fade-in-up">
-        {/* Store Name */}
+        {/* Store Name + Logo */}
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">
-            {t("submit.storeName")} *
-          </label>
-          <input
-            type="text"
-            value={form.storeName}
-            onChange={(e) => updateForm({ storeName: e.target.value })}
-            placeholder={t("submit.storeNamePlaceholder")}
-            className={inputClass(errors.storeName)}
-            autoFocus
-          />
-          <ErrorMsg msg={errors.storeName} />
+          <label className="block text-sm font-medium text-slate-300 mb-1">{t("submit.storeName")} *</label>
+          <div className="flex items-start gap-3">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={form.storeName}
+                onChange={(e) => updateForm({ storeName: e.target.value })}
+                placeholder={t("submit.storeNamePlaceholder")}
+                className={inputClass(errors.storeName)}
+                autoFocus
+              />
+              <ErrorMsg msg={errors.storeName} />
+            </div>
+            {/* Logo upload */}
+            <div className="flex-shrink-0">
+              {logoPreview ? (
+                <div className="relative group">
+                  <div className="w-[44px] h-[44px] rounded-xl overflow-hidden ring-1 ring-slate-700/30">
+                    <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removeLogo}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-black/80 rounded-full flex items-center justify-center text-white hover:bg-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                    aria-label="Remove logo"
+                  >
+                    <svg
+                      className="w-2.5 h-2.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => logoInputRef.current?.click()}
+                  className="w-[44px] h-[44px] rounded-xl border-2 border-dashed border-slate-700/40 flex flex-col items-center justify-center hover:border-indigo-500/40 hover:bg-slate-800/30 transition-all active:scale-95"
+                  title="Upload store logo (optional)"
+                >
+                  <svg
+                    className="w-4 h-4 text-slate-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.068 2.068M12 6.75h.008v.008H12V6.75z"
+                    />
+                  </svg>
+                  <span className="text-[8px] text-slate-600 mt-0.5 leading-none">Logo</span>
+                </button>
+              )}
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) handleLogoSelect(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Offer Title */}
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">
-            {t("submit.offerTitle")} *
-          </label>
+          <label className="block text-sm font-medium text-slate-300 mb-1">{t("submit.offerTitle")} *</label>
           <input
             type="text"
             value={form.title}
@@ -303,9 +392,7 @@ export function SubmitOfferForm() {
 
         {/* Discount % with quick picks */}
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">
-            {t("submit.discount")} *
-          </label>
+          <label className="block text-sm font-medium text-slate-300 mb-1.5">{t("submit.discount")} *</label>
           <div className="flex items-center gap-2 mb-2 overflow-x-auto pb-1 -mx-1 px-1">
             {DISCOUNT_QUICK_PICKS.map((val) => (
               <button
@@ -336,9 +423,7 @@ export function SubmitOfferForm() {
 
         {/* Category chips */}
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">
-            {t("submit.category")} *
-          </label>
+          <label className="block text-sm font-medium text-slate-300 mb-1.5">{t("submit.category")} *</label>
           <div className="flex flex-wrap gap-1.5">
             {CATEGORIES.map((cat) => (
               <button
@@ -346,9 +431,7 @@ export function SubmitOfferForm() {
                 type="button"
                 onClick={() => updateForm({ category: cat.id })}
                 className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all active:scale-95 ${
-                  form.category === cat.id
-                    ? "text-white"
-                    : "bg-slate-800/40 text-slate-400 hover:bg-slate-800/60"
+                  form.category === cat.id ? "text-white" : "bg-slate-800/40 text-slate-400 hover:bg-slate-800/60"
                 }`}
                 style={
                   form.category === cat.id
@@ -371,9 +454,7 @@ export function SubmitOfferForm() {
         {/* Location */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-sm font-medium text-slate-300">
-              {t("submit.location")} *
-            </label>
+            <label className="block text-sm font-medium text-slate-300">{t("submit.location")} *</label>
             <button
               type="button"
               onClick={handleUseCurrentLocation}
@@ -381,43 +462,18 @@ export function SubmitOfferForm() {
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 active:scale-95 transition-all disabled:opacity-50"
             >
               {gpsRequesting ? (
-                <svg
-                  className="w-3.5 h-3.5 animate-spin"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
+                <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
               ) : (
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z"
                   />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 2v2m0 16v2m10-10h-2M4 12H2"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 2v2m0 16v2m10-10h-2M4 12H2" />
                 </svg>
               )}
               {gpsRequesting ? t("submit.detecting") : t("submit.useCurrentLocation")}
@@ -427,28 +483,11 @@ export function SubmitOfferForm() {
           {locationLoading ? (
             <div className="h-[160px] rounded-2xl overflow-hidden border border-slate-700/30 flex items-center justify-center bg-slate-800/30">
               <div className="text-center">
-                <svg
-                  className="w-5 h-5 mx-auto text-slate-500 animate-spin mb-2"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
+                <svg className="w-5 h-5 mx-auto text-slate-500 animate-spin mb-2" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
-                <span className="text-xs text-slate-500">
-                  {t("submit.detectingLocation")}
-                </span>
+                <span className="text-xs text-slate-500">{t("submit.detectingLocation")}</span>
               </div>
             </div>
           ) : (
@@ -458,9 +497,7 @@ export function SubmitOfferForm() {
                 pickMode={true}
                 onMapClick={handleMapClick}
                 pickedLocation={
-                  form.latitude !== null && form.longitude !== null
-                    ? { lat: form.latitude, lng: form.longitude }
-                    : null
+                  form.latitude !== null && form.longitude !== null ? { lat: form.latitude, lng: form.longitude } : null
                 }
               />
               {form.latitude !== null && form.longitude !== null && (
@@ -473,16 +510,24 @@ export function SubmitOfferForm() {
 
           {form.latitude === null && !locationLoading && (
             <p className="text-xs text-amber-400/80 mt-1.5 flex items-center gap-1">
-              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-3.5 h-3.5 flex-shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
               {t("submit.tapMapHint")}
             </p>
           )}
           {form.latitude !== null && !locationLoading && (
-            <p className="text-xs text-slate-500 mt-1">
-              {t("submit.adjustPin")}
-            </p>
+            <p className="text-xs text-slate-500 mt-1">{t("submit.adjustPin")}</p>
           )}
           <ErrorMsg msg={errors.location} />
 
@@ -510,15 +555,10 @@ export function SubmitOfferForm() {
               stroke="currentColor"
               strokeWidth={2}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9 5l7 7-7 7"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
             <span className="font-medium">
-              {t("submit.moreDetails")}{" "}
-              <span className="font-normal text-slate-500">({t("submit.optional")})</span>
+              {t("submit.moreDetails")} <span className="font-normal text-slate-500">({t("submit.optional")})</span>
             </span>
           </button>
 
@@ -527,9 +567,7 @@ export function SubmitOfferForm() {
               {/* Description */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-medium text-slate-400">
-                    {t("submit.description")}
-                  </label>
+                  <label className="block text-xs font-medium text-slate-400">{t("submit.description")}</label>
                   {form.description.trim() && (
                     <button
                       type="button"
@@ -547,18 +585,14 @@ export function SubmitOfferForm() {
                 ) : (
                   <textarea
                     value={form.description}
-                    onChange={(e) =>
-                      updateForm({ description: e.target.value })
-                    }
+                    onChange={(e) => updateForm({ description: e.target.value })}
                     placeholder={t("submit.descriptionPlaceholder")}
                     rows={2}
                     className={`${inputClass()} resize-none`}
                     maxLength={500}
                   />
                 )}
-                <p className="text-[10px] text-slate-600 mt-1">
-                  {t("submit.markdownHint")}
-                </p>
+                <p className="text-[10px] text-slate-600 mt-1">{t("submit.markdownHint")}</p>
               </div>
 
               {/* Tags */}
@@ -573,7 +607,7 @@ export function SubmitOfferForm() {
                       type="button"
                       onClick={() => {
                         setSelectedTags((prev) =>
-                          prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                          prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
                         );
                       }}
                       className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all active:scale-95 ${
@@ -597,24 +631,18 @@ export function SubmitOfferForm() {
                   <input
                     type="number"
                     value={form.originalPrice}
-                    onChange={(e) =>
-                      updateForm({ originalPrice: e.target.value })
-                    }
+                    onChange={(e) => updateForm({ originalPrice: e.target.value })}
                     placeholder="1000"
                     min={0}
                     className={inputClass()}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
-                    {t("submit.offerPrice")} (৳)
-                  </label>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">{t("submit.offerPrice")} (৳)</label>
                   <input
                     type="number"
                     value={form.offerPrice}
-                    onChange={(e) =>
-                      updateForm({ offerPrice: e.target.value })
-                    }
+                    onChange={(e) => updateForm({ offerPrice: e.target.value })}
                     placeholder="500"
                     min={0}
                     className={inputClass()}
@@ -625,42 +653,30 @@ export function SubmitOfferForm() {
               {/* Dates */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
-                    {t("submit.startDate")}
-                  </label>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">{t("submit.startDate")}</label>
                   <input
                     type="date"
                     value={form.startDate}
-                    onChange={(e) =>
-                      updateForm({ startDate: e.target.value })
-                    }
+                    onChange={(e) => updateForm({ startDate: e.target.value })}
                     className={inputClass(errors.dates)}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
-                    {t("submit.endDate")}
-                  </label>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">{t("submit.endDate")}</label>
                   <input
                     type="date"
                     value={form.endDate}
-                    onChange={(e) =>
-                      updateForm({ endDate: e.target.value })
-                    }
+                    onChange={(e) => updateForm({ endDate: e.target.value })}
                     className={inputClass(errors.dates)}
                   />
                 </div>
               </div>
               <ErrorMsg msg={errors.dates} />
-              <p className="text-[10px] text-slate-600">
-                {t("submit.dateHint")}
-              </p>
+              <p className="text-[10px] text-slate-600">{t("submit.dateHint")}</p>
 
               {/* Coupon Code */}
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  {t("submit.couponCode")}
-                </label>
+                <label className="block text-xs font-medium text-slate-400 mb-1">{t("submit.couponCode")}</label>
                 <input
                   type="text"
                   value={form.couponCode}
@@ -674,8 +690,7 @@ export function SubmitOfferForm() {
               {/* Photos */}
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                  {t("submit.photos")}{" "}
-                  <span className="text-slate-500">(max 5)</span>
+                  {t("submit.photos")} <span className="text-slate-500">(max 5)</span>
                 </label>
                 <div className="flex gap-2 flex-wrap">
                   {imageFiles.map((_, i) => (
@@ -683,21 +698,13 @@ export function SubmitOfferForm() {
                       key={i}
                       className="relative w-16 h-16 rounded-xl overflow-hidden ring-1 ring-slate-700/30 group"
                     >
-                      <img
-                        src={imagePreviews[i]}
-                        alt={`Upload ${i + 1}`}
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={imagePreviews[i]} alt={`Upload ${i + 1}`} className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => {
                           URL.revokeObjectURL(imagePreviews[i]);
-                          setImageFiles((prev) =>
-                            prev.filter((_, idx) => idx !== i),
-                          );
-                          setImagePreviews((prev) =>
-                            prev.filter((_, idx) => idx !== i),
-                          );
+                          setImageFiles((prev) => prev.filter((_, idx) => idx !== i));
+                          setImagePreviews((prev) => prev.filter((_, idx) => idx !== i));
                         }}
                         className="absolute top-0.5 right-0.5 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center text-white hover:bg-red-500 transition-colors opacity-0 group-hover:opacity-100"
                         aria-label={`Remove image ${i + 1}`}
@@ -709,11 +716,7 @@ export function SubmitOfferForm() {
                           stroke="currentColor"
                           strokeWidth={2.5}
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M6 18L18 6M6 6l12 12"
-                          />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
                     </div>
@@ -736,11 +739,7 @@ export function SubmitOfferForm() {
                           strokeLinejoin="round"
                           d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
                         />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
                     </button>
                   )}
@@ -756,9 +755,7 @@ export function SubmitOfferForm() {
                     }}
                   />
                 </div>
-                <p className="text-[10px] text-slate-600 mt-1">
-                  {t("submit.photosHint")}
-                </p>
+                <p className="text-[10px] text-slate-600 mt-1">{t("submit.photosHint")}</p>
               </div>
             </div>
           )}
@@ -777,41 +774,16 @@ export function SubmitOfferForm() {
             >
               {submitting ? (
                 <>
-                  <svg
-                    className="w-4 h-4 animate-spin"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
+                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
                   <span>{uploadProgress || t("submit.posting")}</span>
                 </>
               ) : (
                 <>
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 4v16m8-8H4"
-                    />
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                   </svg>
                   {t("submit.postOffer")}
                 </>
@@ -828,20 +800,30 @@ export function SubmitOfferForm() {
           <div className="relative glass-strong rounded-2xl p-5 max-w-sm w-full animate-scale-in shadow-2xl">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-8 h-8 rounded-full bg-amber-500/15 flex items-center justify-center">
-                <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                <svg
+                  className="w-4 h-4 text-amber-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
                 </svg>
               </div>
               <h3 className="text-sm font-semibold text-white">{t("duplicate.title")}</h3>
             </div>
-            <p className="text-xs text-slate-400 mb-3">
-              {t("duplicate.message")}
-            </p>
+            <p className="text-xs text-slate-400 mb-3">{t("duplicate.message")}</p>
             <div className="space-y-2 mb-4 max-h-40 overflow-y-auto">
               {duplicates.map((d) => (
                 <div key={d._id} className="bg-slate-800/40 rounded-xl px-3 py-2">
                   <p className="text-xs text-white font-medium truncate">{d.title}</p>
-                  <p className="text-[10px] text-slate-500">{d.storeName} &middot; {d.discountPercent}% OFF &middot; {d.address}</p>
+                  <p className="text-[10px] text-slate-500">
+                    {d.storeName} &middot; {d.discountPercent}% OFF &middot; {d.address}
+                  </p>
                 </div>
               ))}
             </div>

@@ -14,12 +14,7 @@ function notify() {
   for (const fn of listeners) fn([...toasts]);
 }
 
-export function toast(
-  message: string,
-  type: ToastType = "info",
-  duration = 3500,
-  onClick?: () => void,
-) {
+export function toast(message: string, type: ToastType = "info", duration = 3500, onClick?: () => void) {
   const id = Math.random().toString(36).slice(2);
   toasts = [...toasts, { id, message, type, onClick }];
   notify();

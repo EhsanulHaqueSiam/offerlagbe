@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { getCachedOffers } from "@/lib/offlineStore";
 import type { Offer } from "@/types/offer";
 

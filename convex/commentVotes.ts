@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
-import { validateVisitorId, isValidVisitorId } from "./validators";
+import { mutation, query } from "./_generated/server";
+import { isValidVisitorId, validateVisitorId } from "./validators";
 
 export const getVisitorCommentVote = query({
   args: {
@@ -11,9 +11,7 @@ export const getVisitorCommentVote = query({
     if (!isValidVisitorId(args.visitorId)) return false;
     const existing = await ctx.db
       .query("commentVotes")
-      .withIndex("by_visitor_comment", (q) =>
-        q.eq("visitorId", args.visitorId).eq("commentId", args.commentId),
-      )
+      .withIndex("by_visitor_comment", (q) => q.eq("visitorId", args.visitorId).eq("commentId", args.commentId))
       .first();
     return existing !== null;
   },
@@ -40,9 +38,7 @@ export const toggleCommentVote = mutation({
 
     const existing = await ctx.db
       .query("commentVotes")
-      .withIndex("by_visitor_comment", (q) =>
-        q.eq("visitorId", args.visitorId).eq("commentId", args.commentId),
-      )
+      .withIndex("by_visitor_comment", (q) => q.eq("visitorId", args.visitorId).eq("commentId", args.commentId))
       .first();
 
     const comment = await ctx.db.get(args.commentId);

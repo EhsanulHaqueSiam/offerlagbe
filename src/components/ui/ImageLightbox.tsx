@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface ImageLightboxProps {
   images: string[];
@@ -6,11 +6,7 @@ interface ImageLightboxProps {
   onClose: () => void;
 }
 
-export function ImageLightbox({
-  images,
-  initialIndex = 0,
-  onClose,
-}: ImageLightboxProps) {
+export function ImageLightbox({ images, initialIndex = 0, onClose }: ImageLightboxProps) {
   const [index, setIndex] = useState(initialIndex);
 
   const goPrev = useCallback(() => {
@@ -50,8 +46,9 @@ export function ImageLightbox({
       {/* Image */}
       <img
         src={images[index]}
-        alt={`Image ${index + 1} of ${images.length}`}
+        alt={`Photo ${index + 1} of ${images.length}`}
         className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg animate-scale-in select-none"
+        decoding="async"
         onClick={(e) => e.stopPropagation()}
         draggable={false}
       />

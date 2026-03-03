@@ -3,8 +3,7 @@ import { internalMutation } from "./_generated/server";
 const DEMO_OFFERS = [
   {
     title: "50% Off Biriyani Festival",
-    description:
-      "Enjoy authentic Kacchi Biriyani at half price! Valid for dine-in and takeaway.",
+    description: "Enjoy authentic Kacchi Biriyani at half price! Valid for dine-in and takeaway.",
     category: "food",
     discountPercent: 50,
     originalPrice: 500,
@@ -16,8 +15,7 @@ const DEMO_OFFERS = [
   },
   {
     title: "30% Off Samsung Galaxy S25",
-    description:
-      "Latest Samsung Galaxy S25 at incredible discount. Limited stock available!",
+    description: "Latest Samsung Galaxy S25 at incredible discount. Limited stock available!",
     category: "electronics",
     discountPercent: 30,
     originalPrice: 95000,
@@ -29,8 +27,7 @@ const DEMO_OFFERS = [
   },
   {
     title: "Buy 2 Get 1 Free - Aarong",
-    description:
-      "Buy any 2 items and get 1 free on all traditional wear collection.",
+    description: "Buy any 2 items and get 1 free on all traditional wear collection.",
     category: "fashion",
     discountPercent: 33,
     latitude: 23.7937,
@@ -40,8 +37,7 @@ const DEMO_OFFERS = [
   },
   {
     title: "60% Off Spa Package",
-    description:
-      "Full body massage + facial + hair treatment at 60% off. Book now!",
+    description: "Full body massage + facial + hair treatment at 60% off. Book now!",
     category: "beauty",
     discountPercent: 60,
     originalPrice: 5000,
@@ -53,8 +49,7 @@ const DEMO_OFFERS = [
   },
   {
     title: "40% Off Furniture - Hatil",
-    description:
-      "Mega furniture sale! Bedroom sets, dining tables and sofas at 40% off.",
+    description: "Mega furniture sale! Bedroom sets, dining tables and sofas at 40% off.",
     category: "home",
     discountPercent: 40,
     originalPrice: 80000,
@@ -66,8 +61,7 @@ const DEMO_OFFERS = [
   },
   {
     title: "25% Off Gym Membership",
-    description:
-      "Annual gym membership at 25% discount. Includes free trainer sessions.",
+    description: "Annual gym membership at 25% discount. Includes free trainer sessions.",
     category: "sports",
     discountPercent: 25,
     originalPrice: 24000,
@@ -79,8 +73,7 @@ const DEMO_OFFERS = [
   },
   {
     title: "45% Off Cox's Bazar Package",
-    description:
-      "3 nights hotel + flights to Cox's Bazar at 45% off. Couples special!",
+    description: "3 nights hotel + flights to Cox's Bazar at 45% off. Couples special!",
     category: "travel",
     discountPercent: 45,
     originalPrice: 25000,
@@ -92,8 +85,7 @@ const DEMO_OFFERS = [
   },
   {
     title: "70% Off IELTS Prep Course",
-    description:
-      "Complete IELTS preparation course with mock tests. Online + offline.",
+    description: "Complete IELTS preparation course with mock tests. Online + offline.",
     category: "education",
     discountPercent: 70,
     originalPrice: 15000,
@@ -105,8 +97,7 @@ const DEMO_OFFERS = [
   },
   {
     title: "Free Health Checkup + 20% Off",
-    description:
-      "Free comprehensive health checkup with 20% off all lab tests.",
+    description: "Free comprehensive health checkup with 20% off all lab tests.",
     category: "healthcare",
     discountPercent: 20,
     latitude: 23.7509,
@@ -138,8 +129,7 @@ const DEMO_OFFERS = [
   },
   {
     title: "35% Off AC Servicing",
-    description:
-      "Complete AC cleaning and gas refill at 35% off. Home service available.",
+    description: "Complete AC cleaning and gas refill at 35% off. Home service available.",
     category: "services",
     discountPercent: 35,
     originalPrice: 3000,
@@ -183,8 +173,7 @@ const DEMO_OFFERS = [
   },
   {
     title: "80% Off Online Courses",
-    description:
-      "Web development, data science, and AI courses at 80% off on Bohubrihi.",
+    description: "Web development, data science, and AI courses at 80% off on Bohubrihi.",
     category: "education",
     discountPercent: 80,
     originalPrice: 5000,
@@ -230,8 +219,7 @@ const DEMO_OFFERS = [
   },
   {
     title: "65% Off Gaming Mouse & Keyboard",
-    description:
-      "Logitech gaming combo at 65% off. Limited time Ramadan special!",
+    description: "Logitech gaming combo at 65% off. Limited time Ramadan special!",
     category: "electronics",
     discountPercent: 65,
     originalPrice: 8000,

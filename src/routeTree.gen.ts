@@ -19,12 +19,12 @@ const SubmitRoute = SubmitRouteImport.update({
   id: '/submit',
   path: '/submit',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/submit.lazy').then((d) => d.Route))
 const LeaderboardRoute = LeaderboardRouteImport.update({
   id: '/leaderboard',
   path: '/leaderboard',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/leaderboard.lazy').then((d) => d.Route))
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -34,7 +34,7 @@ const StoreNameRoute = StoreNameRouteImport.update({
   id: '/store/$name',
   path: '/store/$name',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/store.$name.lazy').then((d) => d.Route))
 const OfferIdRoute = OfferIdRouteImport.update({
   id: '/offer/$id',
   path: '/offer/$id',

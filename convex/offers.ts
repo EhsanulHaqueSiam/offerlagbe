@@ -1,16 +1,17 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
-import { validateVisitorId, isValidVisitorId } from "./validators";
+import type { Doc, Id } from "./_generated/dataModel";
+import { mutation, query } from "./_generated/server";
+import { isValidVisitorId, validateVisitorId } from "./validators";
 
 // Helper to resolve image URLs and strip sensitive fields
-async function resolveOffer(ctx: any, offer: any) {
-  const logoUrl = offer.logoStorageId
-    ? await ctx.storage.getUrl(offer.logoStorageId)
-    : null;
-  const imageUrls = await Promise.all(
-    offer.imageStorageIds.map((id: any) => ctx.storage.getUrl(id)),
-  );
-  const { submitterId: _s, imageStorageIds: _i, logoStorageId: _l, ...safe } = offer;
+async function resolveOffer(
+  ctx: { storage: { getUrl: (id: Id<"_storage">) => Promise<string | null> } },
+  offer: Doc<"offers">,
+) {
+  const logoUrl = offer.logoStorageId ? await ctx.storage.getUrl(offer.logoStorageId) : null;
+  const imageUrls = await Promise.all(offer.imageStorageIds.map((id) => ctx.storage.getUrl(id)));
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { submitterId, imageStorageIds, logoStorageId, ...safe } = offer;
   return {
     ...safe,
     logoUrl,
@@ -19,20 +20,13 @@ async function resolveOffer(ctx: any, offer: any) {
 }
 
 /** Haversine distance in kilometers between two lat/lng points. */
-function haversineKm(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-): number {
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -69,9 +63,7 @@ export const search = query({
 
     const results = await ctx.db
       .query("offers")
-      .withSearchIndex("search_title", (q) =>
-        q.search("title", args.searchTerm).eq("status", "active"),
-      )
+      .withSearchIndex("search_title", (q) => q.search("title", args.searchTerm).eq("status", "active"))
       .take(20);
 
     return Promise.all(results.map((o) => resolveOffer(ctx, o)));
@@ -89,7 +81,20 @@ export const getById = query({
 
 const ALLOWED_TAGS = ["verified", "limited-stock", "online-only", "in-store-only", "members-only", "new-arrival"];
 
-const VALID_CATEGORIES = ["food", "electronics", "fashion", "beauty", "home", "sports", "travel", "education", "healthcare", "entertainment", "groceries", "services"];
+const VALID_CATEGORIES = [
+  "food",
+  "electronics",
+  "fashion",
+  "beauty",
+  "home",
+  "sports",
+  "travel",
+  "education",
+  "healthcare",
+  "entertainment",
+  "groceries",
+  "services",
+];
 
 export const create = mutation({
   args: {
@@ -123,16 +128,18 @@ export const create = mutation({
     if (args.latitude < -90 || args.latitude > 90) throw new Error("Invalid latitude");
     if (args.longitude < -180 || args.longitude > 180) throw new Error("Invalid longitude");
     if (!VALID_CATEGORIES.includes(args.category)) throw new Error("Invalid category");
-    if (args.originalPrice !== undefined && (args.originalPrice < 0 || args.originalPrice > 10000000)) throw new Error("Invalid price");
-    if (args.offerPrice !== undefined && (args.offerPrice < 0 || args.offerPrice > 10000000)) throw new Error("Invalid price");
+    if (args.originalPrice !== undefined && (args.originalPrice < 0 || args.originalPrice > 10000000))
+      throw new Error("Invalid price");
+    if (args.offerPrice !== undefined && (args.offerPrice < 0 || args.offerPrice > 10000000))
+      throw new Error("Invalid price");
     if (args.couponCode && args.couponCode.length > 50) throw new Error("Coupon code too long");
     if (args.imageStorageIds.length > 5) throw new Error("Maximum 5 images");
 
     if (args.submitterId) validateVisitorId(args.submitterId);
 
     // Validate dates if provided
-    if (args.startDate && isNaN(Date.parse(args.startDate))) throw new Error("Invalid start date");
-    if (args.endDate && isNaN(Date.parse(args.endDate))) throw new Error("Invalid end date");
+    if (args.startDate && Number.isNaN(Date.parse(args.startDate))) throw new Error("Invalid start date");
+    if (args.endDate && Number.isNaN(Date.parse(args.endDate))) throw new Error("Invalid end date");
 
     // Rate limit: max 3 offers per submitter per hour
     if (args.submitterId) {
@@ -199,14 +206,10 @@ export const checkDuplicate = query({
 
     const results = await ctx.db
       .query("offers")
-      .withSearchIndex("search_title", (q) =>
-        q.search("title", args.title).eq("status", "active"),
-      )
+      .withSearchIndex("search_title", (q) => q.search("title", args.title).eq("status", "active"))
       .take(10);
 
-    const nearby = results.filter(
-      (o) => haversineKm(args.latitude, args.longitude, o.latitude, o.longitude) <= 0.2,
-    );
+    const nearby = results.filter((o) => haversineKm(args.latitude, args.longitude, o.latitude, o.longitude) <= 0.2);
 
     return nearby.map((o) => ({
       _id: o._id,
@@ -234,10 +237,7 @@ export const listByStore = query({
     const offers = await ctx.db.query("offers").collect();
     const now = Date.now();
 
-    const storeOffers = offers.filter(
-      (o) =>
-        o.storeName === args.storeName && isActiveOffer(o, now),
-    );
+    const storeOffers = offers.filter((o) => o.storeName === args.storeName && isActiveOffer(o, now));
 
     storeOffers.sort((a, b) => b.createdAt - a.createdAt);
 
@@ -261,7 +261,7 @@ export const getNearby = query({
       return haversineKm(target.latitude, target.longitude, o.latitude, o.longitude) <= 0.5;
     });
 
-    nearby.sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes));
+    nearby.sort((a, b) => b.upvotes - b.downvotes - (a.upvotes - a.downvotes));
 
     return Promise.all(nearby.slice(0, 5).map((o) => resolveOffer(ctx, o)));
   },
