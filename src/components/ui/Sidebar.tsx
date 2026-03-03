@@ -7,7 +7,6 @@ import { CategoryFilter } from "../offers/CategoryFilter";
 import { DealOfTheDay } from "../offers/DealOfTheDay";
 import { OfferCard } from "../offers/OfferCard";
 import { SearchBar } from "../offers/SearchBar";
-import { PullToRefresh } from "./PullToRefresh";
 import { SidebarSkeleton } from "./SidebarSkeleton";
 import { SwipeableCard } from "./SwipeableCard";
 
@@ -204,11 +203,20 @@ export const Sidebar = memo(function Sidebar({
             <SearchBar value={searchTerm} onChange={onSearchChange} />
           </div>
 
-          {/* Count + filter toggle + actions — stays in fixed header */}
+          {/* Count + live badge + filter toggle + actions — stays in fixed header */}
           <div className="px-3.5 sm:px-4 pb-2 flex items-center justify-between gap-2">
-            <p className="text-[11px] text-slate-500 font-medium">
-              {offers.length} {offers.length !== 1 ? t("sidebar.offersPlural") : t("sidebar.offers")}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-[11px] text-slate-500 font-medium">
+                {offers.length} {offers.length !== 1 ? t("sidebar.offersPlural") : t("sidebar.offers")}
+              </p>
+              <span className="flex items-center gap-1 text-[10px] text-emerald-400/80 font-medium">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+                </span>
+                Live
+              </span>
+            </div>
             <div className="flex items-center gap-1.5">
               {/* Filter toggle */}
               <button
@@ -307,209 +315,207 @@ export const Sidebar = memo(function Sidebar({
           </div>
 
           {/* Scrollable content — trending, bestThisWeek, filters, offers all scroll together */}
-          <PullToRefresh>
-            <div className="flex-1 overflow-y-auto">
-              {/* Loading skeleton */}
-              {isLoading && <SidebarSkeleton />}
+          <div className="flex-1 overflow-y-auto">
+            {/* Loading skeleton */}
+            {isLoading && <SidebarSkeleton />}
 
-              {/* Deal of the Day */}
-              {!isLoading && dealOfTheDay && (
-                <div className="px-3.5 sm:px-4 pb-2">
-                  <DealOfTheDay offer={dealOfTheDay} onClick={() => onOfferClick?.(dealOfTheDay)} />
+            {/* Deal of the Day */}
+            {!isLoading && dealOfTheDay && (
+              <div className="px-3.5 sm:px-4 pb-2">
+                <DealOfTheDay offer={dealOfTheDay} onClick={() => onOfferClick?.(dealOfTheDay)} />
+              </div>
+            )}
+
+            {/* Trending section */}
+            {trendingOffers.length > 0 && (
+              <div className="px-3.5 sm:px-4 pb-2">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-sm">🔥</span>
+                  <span className="text-[11px] font-semibold text-orange-400 uppercase tracking-wide">
+                    {t("sidebar.trending")}
+                  </span>
                 </div>
-              )}
-
-              {/* Trending section */}
-              {trendingOffers.length > 0 && (
-                <div className="px-3.5 sm:px-4 pb-2">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="text-sm">🔥</span>
-                    <span className="text-[11px] font-semibold text-orange-400 uppercase tracking-wide">
-                      {t("sidebar.trending")}
-                    </span>
-                  </div>
-                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
-                    {trendingOffers.map((offer) => (
-                      <button
-                        key={offer._id}
-                        onClick={() => onOfferClick?.(offer)}
-                        className="flex-shrink-0 snap-start w-[140px] bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/20 rounded-xl px-2.5 py-2 text-left transition-all active:scale-[0.97] group"
-                      >
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <span className="text-xs">🏷️</span>
-                          <span className="text-[10px] text-slate-500 truncate font-medium">{offer.storeName}</span>
-                        </div>
-                        <p className="text-[11px] text-white font-medium truncate group-hover:text-indigo-300 transition-colors leading-snug">
-                          {offer.title}
-                        </p>
-                        <span className="text-[11px] font-bold text-emerald-400 mt-0.5 block">
-                          {offer.discountPercent}% {t("offer.off")}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Best This Week */}
-              {bestThisWeek.length > 0 && (
-                <div className="px-3.5 sm:px-4 pb-2">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="text-sm">⭐</span>
-                    <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wide">
-                      {t("sidebar.bestThisWeek")}
-                    </span>
-                  </div>
-                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
-                    {bestThisWeek.map((offer) => (
-                      <button
-                        key={offer._id}
-                        onClick={() => onOfferClick?.(offer)}
-                        className="flex-shrink-0 snap-start w-[140px] bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/20 rounded-xl px-2.5 py-2 text-left transition-all active:scale-[0.97] group"
-                      >
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <span className="text-xs">🏷️</span>
-                          <span className="text-[10px] text-slate-500 truncate font-medium">{offer.storeName}</span>
-                        </div>
-                        <p className="text-[11px] text-white font-medium truncate group-hover:text-amber-300 transition-colors leading-snug">
-                          {offer.title}
-                        </p>
-                        <span className="text-[11px] font-bold text-emerald-400 mt-0.5 block">
-                          {offer.discountPercent}% {t("offer.off")}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Collapsible filter panel */}
-              {showFilters && (
-                <>
-                  {/* Sort pills */}
-                  <div className="px-3.5 sm:px-4 pb-2 flex gap-1.5 overflow-x-auto">
-                    {SORT_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => onSortChange(opt.value)}
-                        disabled={opt.value === "nearest" && !userLocation}
-                        className={`flex-shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all active:scale-95 ${
-                          sortBy === opt.value
-                            ? "bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-500/40"
-                            : "bg-slate-800/40 text-slate-500 hover:bg-slate-800/60 hover:text-slate-300"
-                        } disabled:opacity-30 disabled:pointer-events-none`}
-                      >
-                        {t(opt.labelKey)}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Categories */}
-                  <div className="px-3.5 sm:px-4 pb-2.5">
-                    <CategoryFilter activeCategories={activeCategories} onToggle={onToggleCategory} />
-                  </div>
-
-                  {/* Price range pills */}
-                  <div className="px-3.5 sm:px-4 pb-2 flex gap-1.5 overflow-x-auto">
-                    <span className="text-[10px] text-slate-600 font-medium flex-shrink-0 self-center">
-                      {t("filter.price")}:
-                    </span>
-                    {PRICE_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => onPriceRangeChange(opt.value)}
-                        className={`flex-shrink-0 px-2 py-1 rounded-lg text-[10px] font-medium transition-all active:scale-95 ${
-                          priceRange === opt.value
-                            ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40"
-                            : "bg-slate-800/40 text-slate-500 hover:bg-slate-800/60 hover:text-slate-300"
-                        }`}
-                      >
-                        {t(opt.labelKey)}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Date filter pills */}
-                  <div className="px-3.5 sm:px-4 pb-2 flex gap-1.5 overflow-x-auto">
-                    <span className="text-[10px] text-slate-600 font-medium flex-shrink-0 self-center">
-                      {t("filter.date")}:
-                    </span>
-                    {DATE_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => onDateFilterChange(opt.value)}
-                        className={`flex-shrink-0 px-2 py-1 rounded-lg text-[10px] font-medium transition-all active:scale-95 ${
-                          dateFilter === opt.value
-                            ? "bg-purple-500/20 text-purple-300 ring-1 ring-purple-500/40"
-                            : "bg-slate-800/40 text-slate-500 hover:bg-slate-800/60 hover:text-slate-300"
-                        }`}
-                      >
-                        {t(opt.labelKey)}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* Offer list */}
-              {!isLoading && (
-                <div className="px-3.5 sm:px-4 pb-4 space-y-2">
-                  {offers.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-center">
-                      <div className="w-14 h-14 rounded-2xl bg-slate-800/60 flex items-center justify-center mb-3">
-                        <svg
-                          className="w-7 h-7 text-slate-600"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={1.5}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                          />
-                        </svg>
+                <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
+                  {trendingOffers.map((offer) => (
+                    <button
+                      key={offer._id}
+                      onClick={() => onOfferClick?.(offer)}
+                      className="flex-shrink-0 snap-start w-[140px] bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/20 rounded-xl px-2.5 py-2 text-left transition-all active:scale-[0.97] group"
+                    >
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-xs">🏷️</span>
+                        <span className="text-[10px] text-slate-500 truncate font-medium">{offer.storeName}</span>
                       </div>
-                      <p className="text-sm font-medium text-slate-400">{t("sidebar.noOffers")}</p>
-                      <p className="text-xs text-slate-600 mt-1">{t("sidebar.noOffersHint")}</p>
-                    </div>
-                  ) : (
-                    offers
-                      .filter((o) => !dismissedIds.has(o._id))
-                      .map((offer) => (
-                        <SwipeableCard
-                          key={offer._id}
-                          onSwipeRight={() => onToggleBookmark(offer._id)}
-                          onSwipeLeft={() => {
-                            setDismissedIds((prev) => {
-                              const next = new Set(prev);
-                              next.add(offer._id);
-                              try {
-                                const data = JSON.parse(localStorage.getItem("offerlagbe_dismissed") || "{}");
-                                data[offer._id] = Date.now();
-                                localStorage.setItem("offerlagbe_dismissed", JSON.stringify(data));
-                              } catch {
-                                /* ignore */
-                              }
-                              return next;
-                            });
-                          }}
-                        >
-                          <OfferCard
-                            offer={offer}
-                            userLocation={userLocation}
-                            onClick={() => onOfferClick?.(offer)}
-                            isBookmarked={bookmarkedIds.has(offer._id)}
-                            onToggleBookmark={onToggleBookmark}
-                          />
-                        </SwipeableCard>
-                      ))
-                  )}
+                      <p className="text-[11px] text-white font-medium truncate group-hover:text-indigo-300 transition-colors leading-snug">
+                        {offer.title}
+                      </p>
+                      <span className="text-[11px] font-bold text-emerald-400 mt-0.5 block">
+                        {offer.discountPercent}% {t("offer.off")}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-              )}
-            </div>
-          </PullToRefresh>
+              </div>
+            )}
+
+            {/* Best This Week */}
+            {bestThisWeek.length > 0 && (
+              <div className="px-3.5 sm:px-4 pb-2">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-sm">⭐</span>
+                  <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wide">
+                    {t("sidebar.bestThisWeek")}
+                  </span>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
+                  {bestThisWeek.map((offer) => (
+                    <button
+                      key={offer._id}
+                      onClick={() => onOfferClick?.(offer)}
+                      className="flex-shrink-0 snap-start w-[140px] bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/20 rounded-xl px-2.5 py-2 text-left transition-all active:scale-[0.97] group"
+                    >
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-xs">🏷️</span>
+                        <span className="text-[10px] text-slate-500 truncate font-medium">{offer.storeName}</span>
+                      </div>
+                      <p className="text-[11px] text-white font-medium truncate group-hover:text-amber-300 transition-colors leading-snug">
+                        {offer.title}
+                      </p>
+                      <span className="text-[11px] font-bold text-emerald-400 mt-0.5 block">
+                        {offer.discountPercent}% {t("offer.off")}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Collapsible filter panel */}
+            {showFilters && (
+              <>
+                {/* Sort pills */}
+                <div className="px-3.5 sm:px-4 pb-2 flex gap-1.5 overflow-x-auto">
+                  {SORT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => onSortChange(opt.value)}
+                      disabled={opt.value === "nearest" && !userLocation}
+                      className={`flex-shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all active:scale-95 ${
+                        sortBy === opt.value
+                          ? "bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-500/40"
+                          : "bg-slate-800/40 text-slate-500 hover:bg-slate-800/60 hover:text-slate-300"
+                      } disabled:opacity-30 disabled:pointer-events-none`}
+                    >
+                      {t(opt.labelKey)}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Categories */}
+                <div className="px-3.5 sm:px-4 pb-2.5">
+                  <CategoryFilter activeCategories={activeCategories} onToggle={onToggleCategory} />
+                </div>
+
+                {/* Price range pills */}
+                <div className="px-3.5 sm:px-4 pb-2 flex gap-1.5 overflow-x-auto">
+                  <span className="text-[10px] text-slate-600 font-medium flex-shrink-0 self-center">
+                    {t("filter.price")}:
+                  </span>
+                  {PRICE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => onPriceRangeChange(opt.value)}
+                      className={`flex-shrink-0 px-2 py-1 rounded-lg text-[10px] font-medium transition-all active:scale-95 ${
+                        priceRange === opt.value
+                          ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40"
+                          : "bg-slate-800/40 text-slate-500 hover:bg-slate-800/60 hover:text-slate-300"
+                      }`}
+                    >
+                      {t(opt.labelKey)}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Date filter pills */}
+                <div className="px-3.5 sm:px-4 pb-2 flex gap-1.5 overflow-x-auto">
+                  <span className="text-[10px] text-slate-600 font-medium flex-shrink-0 self-center">
+                    {t("filter.date")}:
+                  </span>
+                  {DATE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => onDateFilterChange(opt.value)}
+                      className={`flex-shrink-0 px-2 py-1 rounded-lg text-[10px] font-medium transition-all active:scale-95 ${
+                        dateFilter === opt.value
+                          ? "bg-purple-500/20 text-purple-300 ring-1 ring-purple-500/40"
+                          : "bg-slate-800/40 text-slate-500 hover:bg-slate-800/60 hover:text-slate-300"
+                      }`}
+                    >
+                      {t(opt.labelKey)}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Offer list */}
+            {!isLoading && (
+              <div className="px-3.5 sm:px-4 pb-4 space-y-2">
+                {offers.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-800/60 flex items-center justify-center mb-3">
+                      <svg
+                        className="w-7 h-7 text-slate-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-medium text-slate-400">{t("sidebar.noOffers")}</p>
+                    <p className="text-xs text-slate-600 mt-1">{t("sidebar.noOffersHint")}</p>
+                  </div>
+                ) : (
+                  offers
+                    .filter((o) => !dismissedIds.has(o._id))
+                    .map((offer) => (
+                      <SwipeableCard
+                        key={offer._id}
+                        onSwipeRight={() => onToggleBookmark(offer._id)}
+                        onSwipeLeft={() => {
+                          setDismissedIds((prev) => {
+                            const next = new Set(prev);
+                            next.add(offer._id);
+                            try {
+                              const data = JSON.parse(localStorage.getItem("offerlagbe_dismissed") || "{}");
+                              data[offer._id] = Date.now();
+                              localStorage.setItem("offerlagbe_dismissed", JSON.stringify(data));
+                            } catch {
+                              /* ignore */
+                            }
+                            return next;
+                          });
+                        }}
+                      >
+                        <OfferCard
+                          offer={offer}
+                          userLocation={userLocation}
+                          onClick={() => onOfferClick?.(offer)}
+                          isBookmarked={bookmarkedIds.has(offer._id)}
+                          onToggleBookmark={onToggleBookmark}
+                        />
+                      </SwipeableCard>
+                    ))
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </aside>
 
