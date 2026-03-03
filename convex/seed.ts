@@ -314,3 +314,30 @@ export const seedOffers = internalMutation({
     return `Seeded ${DEMO_OFFERS.length} demo offers`;
   },
 });
+
+export const clearAll = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    // Delete all offers, votes, comments, reports, and related data
+    const tables = [
+      "offers",
+      "votes",
+      "comments",
+      "commentVotes",
+      "reports",
+      "verificationPhotos",
+      "pushSubscriptions",
+    ] as const;
+    let total = 0;
+
+    for (const table of tables) {
+      const docs = await ctx.db.query(table).collect();
+      for (const doc of docs) {
+        await ctx.db.delete(doc._id);
+      }
+      total += docs.length;
+    }
+
+    return `Cleared ${total} documents from ${tables.length} tables`;
+  },
+});
