@@ -325,7 +325,7 @@ export function SubmitOfferForm() {
                   <button
                     type="button"
                     onClick={removeLogo}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-black/80 rounded-full flex items-center justify-center text-white hover:bg-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500/80 rounded-full flex items-center justify-center text-white hover:bg-red-500 transition-colors"
                     aria-label="Remove logo"
                   >
                     <svg
@@ -491,7 +491,7 @@ export function SubmitOfferForm() {
               </div>
             </div>
           ) : (
-            <div className="relative h-[160px] rounded-2xl overflow-hidden border border-slate-700/30">
+            <div className="relative h-[140px] rounded-2xl overflow-hidden border border-slate-700/30 touch-action-pan-y">
               <OfferMap
                 offers={[]}
                 pickMode={true}
@@ -592,7 +592,7 @@ export function SubmitOfferForm() {
                     maxLength={500}
                   />
                 )}
-                <p className="text-[10px] text-slate-600 mt-1">{t("submit.markdownHint")}</p>
+                <p className="text-[10px] text-slate-500 mt-1">{t("submit.markdownHint")}</p>
               </div>
 
               {/* Tags */}
@@ -672,7 +672,7 @@ export function SubmitOfferForm() {
                 </div>
               </div>
               <ErrorMsg msg={errors.dates} />
-              <p className="text-[10px] text-slate-600">{t("submit.dateHint")}</p>
+              <p className="text-[10px] text-slate-500">{t("submit.dateHint")}</p>
 
               {/* Coupon Code */}
               <div>
@@ -706,7 +706,7 @@ export function SubmitOfferForm() {
                           setImageFiles((prev) => prev.filter((_, idx) => idx !== i));
                           setImagePreviews((prev) => prev.filter((_, idx) => idx !== i));
                         }}
-                        className="absolute top-0.5 right-0.5 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center text-white hover:bg-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                        className="absolute top-0.5 right-0.5 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center text-white hover:bg-red-500 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
                         aria-label={`Remove image ${i + 1}`}
                       >
                         <svg
@@ -755,7 +755,7 @@ export function SubmitOfferForm() {
                     }}
                   />
                 </div>
-                <p className="text-[10px] text-slate-600 mt-1">{t("submit.photosHint")}</p>
+                <p className="text-[10px] text-slate-500 mt-1">{t("submit.photosHint")}</p>
               </div>
             </div>
           )}

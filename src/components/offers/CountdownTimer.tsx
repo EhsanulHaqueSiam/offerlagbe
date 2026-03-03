@@ -44,16 +44,16 @@ export function CountdownTimer({ endDate, compact }: CountdownTimerProps) {
       <span className="text-slate-400 text-xs">{t("countdown.endsIn")}</span>
       <div className="flex items-center gap-1">
         {days > 0 && (
-          <span className="bg-orange-500/10 text-orange-400 px-2 py-1 rounded-lg font-bold text-xs">
+          <span className="bg-orange-500/10 text-orange-400 px-2 py-1 rounded-lg font-bold text-xs tabular-nums">
             {days}
             {t("countdown.days")}
           </span>
         )}
-        <span className="bg-orange-500/10 text-orange-400 px-2 py-1 rounded-lg font-bold text-xs">
+        <span className="bg-orange-500/10 text-orange-400 px-2 py-1 rounded-lg font-bold text-xs tabular-nums">
           {hours}
           {t("countdown.hours")}
         </span>
-        <span className="bg-orange-500/10 text-orange-400 px-2 py-1 rounded-lg font-bold text-xs">
+        <span className="bg-orange-500/10 text-orange-400 px-2 py-1 rounded-lg font-bold text-xs tabular-nums">
           {minutes}
           {t("countdown.minutes")}
         </span>

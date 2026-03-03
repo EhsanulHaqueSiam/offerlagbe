@@ -12,7 +12,7 @@ function LeaderboardPage() {
   const leaderboard = useQuery(api.leaderboard.getLeaderboard, {});
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-slate-950 overflow-y-auto">
       {/* Header */}
       <div className="sticky top-0 z-50 glass-strong border-b border-slate-700/20">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">

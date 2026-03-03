@@ -78,7 +78,7 @@ export const OfferCard = memo(function OfferCard({
             )}
             {isExpiringSoon(offer.endDate) && <CountdownTimer endDate={offer.endDate!} compact />}
           </div>
-          <h4 className="text-[13px] font-medium text-white truncate group-hover:text-indigo-300 transition-colors leading-snug">
+          <h4 className="text-sm font-medium text-white truncate group-hover:text-indigo-300 transition-colors leading-snug">
             {offer.title}
           </h4>
           <div className="flex items-center gap-2 mt-1">
@@ -113,7 +113,7 @@ export const OfferCard = memo(function OfferCard({
               e.stopPropagation();
               onToggleBookmark(offer._id);
             }}
-            className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90"
+            className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-800/60 transition-all active:scale-90"
             aria-label={isBookmarked ? "Remove bookmark" : "Save offer"}
           >
             <svg
@@ -167,7 +167,7 @@ export const OfferCard = memo(function OfferCard({
             <span className="text-[10px] text-indigo-400 font-medium flex-shrink-0">{formatDistance(distance)}</span>
           )}
           {(offer.views ?? 0) > 0 && (
-            <div className="flex items-center gap-0.5 text-[10px] text-slate-600 flex-shrink-0">
+            <div className="flex items-center gap-0.5 text-[10px] text-slate-500 flex-shrink-0">
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path

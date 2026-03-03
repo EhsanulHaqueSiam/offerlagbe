@@ -278,7 +278,7 @@ export const Sidebar = memo(function Sidebar({
                       className="flex-shrink-0 snap-start w-[140px] bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/20 rounded-xl px-2.5 py-2 text-left transition-all active:scale-[0.97] group"
                     >
                       <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-xs">{offer.logoUrl ? "" : "🏷️"}</span>
+                        <span className="text-xs">🏷️</span>
                         <span className="text-[10px] text-slate-500 truncate font-medium">{offer.storeName}</span>
                       </div>
                       <p className="text-[11px] text-white font-medium truncate group-hover:text-indigo-300 transition-colors leading-snug">
@@ -310,7 +310,7 @@ export const Sidebar = memo(function Sidebar({
                       className="flex-shrink-0 snap-start w-[140px] bg-slate-800/40 hover:bg-slate-800/60 border border-slate-700/20 rounded-xl px-2.5 py-2 text-left transition-all active:scale-[0.97] group"
                     >
                       <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-xs">{offer.logoUrl ? "" : "🏷️"}</span>
+                        <span className="text-xs">🏷️</span>
                         <span className="text-[10px] text-slate-500 truncate font-medium">{offer.storeName}</span>
                       </div>
                       <p className="text-[11px] text-white font-medium truncate group-hover:text-amber-300 transition-colors leading-snug">
@@ -434,7 +434,10 @@ export const Sidebar = memo(function Sidebar({
 
       {/* Mobile overlay */}
       {isOpen && (
-        <div className="md:hidden fixed inset-0 bg-black/40 z-20 animate-fade-in" onClick={() => setIsOpen(false)} />
+        <div
+          className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-20 animate-fade-in"
+          onClick={() => setIsOpen(false)}
+        />
       )}
     </>
   );

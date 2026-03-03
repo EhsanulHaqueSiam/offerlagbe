@@ -29,10 +29,36 @@ body,
   height: 100dvh;
   margin: 0;
   padding: 0;
-  overflow: hidden;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Only lock scroll on the map home page — other pages must scroll */
+.overflow-locked {
+  overflow: hidden;
+}
+
+/* Global focus-visible ring for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.6);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
+/* Smooth tap feedback for all interactive elements on mobile */
+@media (hover: none) {
+  button,
+  a,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
 }
 
 body {
@@ -204,6 +230,16 @@ body {
 
 .maplibregl-ctrl-group button:hover {
   background-color: rgba(51, 65, 85, 0.5) !important;
+}
+
+/* Allow vertical scroll through embedded maps (submit form) */
+.touch-action-pan-y {
+  touch-action: pan-y;
+}
+
+.touch-action-pan-y canvas,
+.touch-action-pan-y .maplibregl-canvas {
+  touch-action: none;
 }
 
 /* Safe area for sticky buttons on mobile */
