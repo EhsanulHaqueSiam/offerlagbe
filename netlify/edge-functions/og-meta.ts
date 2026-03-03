@@ -12,14 +12,14 @@ const BOT_USER_AGENTS = [
   "Discordbot",
 ];
 
-const CONVEX_URL = "https://precious-kookabura-589.convex.cloud";
+const CONVEX_URL = Deno.env.get("CONVEX_URL") || "";
 
 export default async (request: Request) => {
   const userAgent = request.headers.get("user-agent") || "";
   const isBot = BOT_USER_AGENTS.some((bot) => userAgent.includes(bot));
 
-  if (!isBot) {
-    // Pass through to SPA for real users
+  if (!isBot || !CONVEX_URL) {
+    // Pass through to SPA for real users or if CONVEX_URL not configured
     return;
   }
 
